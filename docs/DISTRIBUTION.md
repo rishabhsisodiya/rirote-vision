@@ -35,7 +35,7 @@ To make the file to send (run after quitting the app):
 ditto -c -k --keepParent "/Applications/RIROTE VISION.app" ~/Desktop/RIROTE-VISION.zip
 ```
 
-The teammate follows **Install, Option A** in the README. If the macOS warning cannot be cleared, they can use Option B and build from source, which avoids it.
+The teammate follows **Install, Option B** in the README. If the macOS warning cannot be cleared, they can use Option A and build from source, which avoids it.
 
 ### 2. Make it properly installable
 
@@ -54,7 +54,7 @@ Everything in path 2, plus:
 1. A decision on Anthropic's terms, possibly an API-key mode beside the Claude Code mode.
 2. Automatic updates.
 3. Licence notices for the bundled parts: HyperFrames (Apache-2.0), the fonts, and the speech and segmentation models the engine downloads.
-4. A decision on the app's own licence; the repository has none yet.
+4. A licence notices file shipped inside the app bundle itself. The repository is MIT-licensed and lists its third-party software in the README, but a distributed build should carry those notices too.
 
 ## Things a new user's Mac gets changed
 

@@ -322,9 +322,10 @@ async fn media_jobs_make_real_files() {
     let created = project::create(data.path(), work.path(), "Media Film", Resolution::Landscape).await.expect("project");
     let project_dir = std::path::PathBuf::from(&created.path);
     let library = MediaLibrary::new();
-    let picture = std::path::PathBuf::from("/Users/rishabhsisodiya/startup/rirote-global/assets/brand/avatar-dark-1024.png");
+    // A picture that is in the repository, so the test runs on any machine.
+    let picture = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("app-icon.png");
     let imported = library.import(&project_dir, &[picture]).await.expect("import");
-    assert_eq!(imported[0].path, "assets/avatar-dark-1024.png");
+    assert_eq!(imported[0].path, "assets/app-icon.png");
 
     let queue = Arc::new(JobQueue::new(data.path()));
     tokio::spawn(queue.clone().work());
@@ -344,7 +345,7 @@ async fn media_jobs_make_real_files() {
 
     // Queue all three at once: they must run in order, one at a time.
     let voiceover = queue.add(&project_dir, JobSpec::Voiceover { text: "Rirote Vision turns a sentence into a finished video.".into(), voice: "af_heart".into() }).unwrap();
-    let cutout = queue.add(&project_dir, JobSpec::RemoveBackground { source: "assets/avatar-dark-1024.png".into() }).unwrap();
+    let cutout = queue.add(&project_dir, JobSpec::RemoveBackground { source: "assets/app-icon.png".into() }).unwrap();
     let spoken = finish(voiceover.id).await;
     println!("{spoken:?}");
     assert_eq!(spoken.status, JobStatus::Done, "{:?}", spoken.error);
@@ -363,7 +364,7 @@ async fn media_jobs_make_real_files() {
     assert!(project_dir.join(wav.replace(".wav", ".transcript.json")).is_file(), "the transcript is beside the sound");
     assert!(!project_dir.join("transcript.json").exists());
     assert_eq!(cut.status, JobStatus::Done, "{:?}", cut.error);
-    assert!(project_dir.join("assets/avatar-dark-1024-cutout.png").is_file());
+    assert!(project_dir.join("assets/app-icon-cutout.png").is_file());
 
     // Music beds, from the script inside the app, in the same environment.
     let bed = |style: &str, seconds: f64, impact_at: Option<f64>| JobSpec::Music { style: style.into(), seconds, impact_at };
