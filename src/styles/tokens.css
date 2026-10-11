@@ -1,0 +1,50 @@
+/* Rirote brand colours (rirote-global/assets/site.css) arranged for an editor.
+   The app is dark only, as video editors are: the picture is judged against it. */
+:root {
+  color-scheme: dark;
+
+  --window: #0a1628;
+  --surface: #0d1f3c;
+  --surface-raised: #0f2340;
+  --stage: #060e1b;
+
+  --text: #f0f4ff;
+  --text-soft: rgba(240, 244, 255, 0.74);
+  --muted: #8899bb;
+
+  --line: rgba(136, 153, 187, 0.18);
+  --line-strong: rgba(136, 153, 187, 0.34);
+
+  --accent: #00b4d8;
+  --accent-hover: #48cae4;
+  --accent-text: #48cae4;
+  --accent-soft: rgba(0, 180, 216, 0.12);
+  --on-accent: #06121f;
+
+  --ok: #06d6a0;
+  --warning: #ffd166;
+  --danger: #ff8c8c;
+  --danger-soft: rgba(255, 140, 140, 0.1);
+
+  --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  --font-data: "Space Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --font-display: "Bebas Neue", var(--font-ui);
+
+  --text-small: 11px;
+  --text-body: 13px;
+  --text-title: 15px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 40px;
+
+  --radius-control: 6px;
+  --radius-pane: 10px;
+  --control-height: 28px;
+  --titlebar-height: 44px;
+  /* Room for the window's close, minimise and zoom buttons. */
+  --traffic-lights: 78px;
+}

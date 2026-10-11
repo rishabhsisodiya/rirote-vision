@@ -1,0 +1,49 @@
+.shortcuts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-5);
+}
+
+.shortcuts h3 {
+  margin: 0 0 var(--space-2);
+  color: var(--muted);
+  font-size: var(--text-small);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.shortcuts__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 3px 0;
+}
+
+.shortcuts__row dt {
+  color: var(--text-soft);
+  font-size: var(--text-small);
+}
+
+.shortcuts__row dd {
+  display: flex;
+  flex: none;
+  gap: 4px;
+}
+
+.shortcuts kbd {
+  min-width: 22px;
+  padding: 1px 6px;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  background: var(--stage);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+  text-align: center;
+}
+
+.dialog:has(.shortcuts) {
+  width: min(760px, calc(100vw - 80px));
+}

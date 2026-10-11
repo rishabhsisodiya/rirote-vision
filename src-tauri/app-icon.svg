@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- RIROTE VISION app icon: a frame with a play mark over three timeline clips.
+       The artwork sits in an 824 px square, as macOS icons do. -->
+  <defs>
+    <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#12294d"/>
+      <stop offset="1" stop-color="#0a1628"/>
+    </linearGradient>
+    <linearGradient id="mark" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#0077b6"/>
+      <stop offset="1" stop-color="#00d4ff"/>
+    </linearGradient>
+  </defs>
+  <rect x="100" y="100" width="824" height="824" rx="186" fill="url(#panel)"/>
+  <rect x="101.500" y="101.500" width="821" height="821" rx="184.500" fill="none" stroke="#48cae4" stroke-opacity="0.22" stroke-width="3"/>
+  <path d="M430 300 L430 560 Q430 588 455 574 L680 446 Q704 430 680 414 L455 286 Q430 272 430 300 Z" fill="url(#mark)"/>
+  <rect x="230" y="672" width="250" height="44" rx="14" fill="#00b4d8"/>
+  <rect x="498" y="672" width="296" height="44" rx="14" fill="#00b4d8" fill-opacity="0.45"/>
+  <rect x="230" y="738" width="150" height="44" rx="14" fill="#06d6a0" fill-opacity="0.85"/>
+  <rect x="398" y="738" width="230" height="44" rx="14" fill="#06d6a0" fill-opacity="0.4"/>
+  <rect x="486" y="640" width="8" height="166" rx="4" fill="#ffd166"/>
+</svg>

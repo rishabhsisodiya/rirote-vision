@@ -1,0 +1,159 @@
+.welcome {
+  position: relative;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.welcome__drag {
+  position: sticky;
+  top: 0;
+  height: var(--titlebar-height);
+}
+
+.welcome__column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  width: min(680px, calc(100% - 80px));
+  margin: 0 auto;
+  padding: var(--space-6) 0 64px;
+}
+
+.welcome__brand p {
+  margin-top: var(--space-1);
+  color: var(--text-soft);
+  font-size: var(--text-title);
+}
+
+/* The one place the brand's display face is used. */
+.wordmark {
+  font: 400 64px / 0.95 var(--font-display);
+  letter-spacing: 0.04em;
+}
+
+.wordmark span {
+  color: var(--accent);
+}
+
+.welcome__actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.welcome__actions .button {
+  height: 34px;
+  padding: 0 var(--space-4);
+}
+
+.setup-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid rgba(255, 209, 102, 0.4);
+  border-radius: var(--radius-control);
+  background: rgba(255, 209, 102, 0.08);
+  color: var(--warning);
+}
+
+.setup-banner p {
+  flex: 1;
+  color: var(--text);
+}
+
+.setup-banner .button {
+  color: var(--text);
+}
+
+.recent h2 {
+  margin-bottom: var(--space-2);
+  color: var(--muted);
+  font-size: var(--text-small);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.recent__state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-pane);
+  color: var(--text-soft);
+}
+
+.recent__list {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pane);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.recent__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding-right: var(--space-2);
+}
+
+.recent__row + .recent__row {
+  border-top: 1px solid var(--line);
+}
+
+.recent__open {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "name when" "path when";
+  align-items: center;
+  column-gap: var(--space-4);
+  flex: 1;
+  min-width: 0;
+  padding: 10px var(--space-4);
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+
+.recent__open:hover:not(:disabled) {
+  background: var(--accent-soft);
+}
+
+.recent__open:focus-visible {
+  outline-offset: -2px;
+}
+
+.recent__open:disabled .recent__name,
+.recent__open:disabled .recent__path {
+  opacity: 0.5;
+}
+
+.recent__name {
+  grid-area: name;
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recent__path {
+  grid-area: path;
+  overflow: hidden;
+  color: var(--muted);
+  font-family: var(--font-data);
+  font-size: var(--text-small);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recent__when {
+  grid-area: when;
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+
+.recent__open:disabled .recent__when {
+  color: var(--warning);
+}

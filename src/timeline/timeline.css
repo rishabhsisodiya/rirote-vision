@@ -1,0 +1,326 @@
+.timeline {
+  --lane-label: 112px;
+  --lane-height: 30px;
+  --ruler-height: 26px;
+
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.timeline__toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex: none;
+  padding: var(--space-1) var(--space-2) var(--space-1) var(--space-4);
+  border-bottom: 1px solid var(--line);
+}
+
+.timeline__title {
+  color: var(--muted);
+  font-size: var(--text-small);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.timeline__group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.timeline__selection {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-family: var(--font-data);
+  font-size: var(--text-small);
+  white-space: nowrap;
+}
+
+.timeline__selection strong {
+  overflow: hidden;
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: var(--text-body);
+  font-weight: 600;
+  text-overflow: ellipsis;
+}
+
+.timeline > .notice {
+  flex: none;
+  margin: var(--space-2);
+}
+
+.timeline__state {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  color: var(--muted);
+  text-align: center;
+  white-space: pre-line;
+}
+
+.timeline__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.timeline__content {
+  position: relative;
+  min-width: 100%;
+  min-height: 100%;
+}
+
+.timeline__ruler-row {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  height: var(--ruler-height);
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+
+.ruler {
+  position: relative;
+  flex: none;
+  height: 100%;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.ruler__tick {
+  position: absolute;
+  bottom: 0;
+  height: 100%;
+  padding: 5px 0 0 5px;
+  border-left: 1px solid var(--line-strong);
+  color: var(--muted);
+  font-family: var(--font-data);
+  font-size: 10px;
+  line-height: 1;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.lane {
+  display: flex;
+  height: var(--lane-height);
+  border-bottom: 1px solid var(--line);
+}
+
+/* A clip dragged to another lane is drawn over the lanes in between. */
+.lane:has(.clip--dragging) {
+  position: relative;
+  z-index: 4;
+}
+
+.lane--target .lane__track {
+  background: var(--accent-soft);
+}
+
+.lane__label {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  flex: none;
+  width: var(--lane-label);
+  padding: 0 var(--space-3);
+  overflow: hidden;
+  border-right: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text-soft);
+  font-size: var(--text-small);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lane__label--corner {
+  z-index: 4;
+}
+
+.lane__track {
+  position: relative;
+  flex: none;
+  height: 100%;
+}
+
+.clip {
+  --clip-fill: rgba(0, 180, 216, 0.26);
+  --clip-edge: #00b4d8;
+
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  display: flex;
+  align-items: center;
+  min-width: 3px;
+  overflow: hidden;
+  border-left: 2px solid var(--clip-edge);
+  border-radius: 4px;
+  background: var(--clip-fill);
+  cursor: grab;
+  touch-action: none;
+}
+
+.clip--video {
+  --clip-fill: rgba(255, 209, 102, 0.24);
+  --clip-edge: #ffd166;
+}
+
+.clip--captions {
+  --clip-fill: rgba(183, 148, 246, 0.26);
+  --clip-edge: #b794f6;
+}
+
+.clip--audio {
+  --clip-fill: rgba(6, 214, 160, 0.22);
+  --clip-edge: #06d6a0;
+}
+
+.clip:hover {
+  filter: brightness(1.25);
+}
+
+.clip--selected {
+  outline: 2px solid var(--text);
+  outline-offset: -1px;
+  filter: brightness(1.3);
+  z-index: 1;
+}
+
+.clip:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: -1px;
+}
+
+.clip--dragging {
+  cursor: grabbing;
+  opacity: 0.85;
+  z-index: 5;
+}
+
+/* Hatching marks a clip that is shown but cannot be edited here. */
+.clip--locked {
+  background-image: repeating-linear-gradient(
+    135deg,
+    transparent 0 5px,
+    rgba(240, 244, 255, 0.1) 5px 6px
+  );
+  cursor: default;
+}
+
+.clip__name {
+  flex: 1;
+  min-width: 0;
+  padding: 0 6px;
+  overflow: hidden;
+  font-size: var(--text-small);
+  pointer-events: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.clip__edge {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 7px;
+  cursor: ew-resize;
+}
+
+.clip__edge--start {
+  left: -2px;
+}
+
+.clip__edge--end {
+  right: 0;
+}
+
+.clip--selected .clip__edge--end {
+  border-right: 2px solid var(--text);
+}
+
+.playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 3;
+  width: 1px;
+  background: var(--warning);
+  pointer-events: none;
+  will-change: transform;
+}
+
+.playhead::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -5px;
+  border: 5px solid transparent;
+  border-top: 7px solid var(--warning);
+}
+
+.inspector {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  padding: 6px var(--space-4);
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-raised);
+}
+
+.inspector__field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+
+.inspector__field input {
+  width: 72px;
+  height: 24px;
+  padding: 0 6px;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  background: var(--stage);
+  color: var(--text);
+  font-family: var(--font-data);
+  font-size: var(--text-small);
+  text-align: right;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.inspector__field input:disabled {
+  opacity: 0.5;
+}
+
+.inspector__field input::-webkit-inner-spin-button {
+  display: none;
+}
+
+.inspector__unit {
+  margin-left: -2px;
+}
+

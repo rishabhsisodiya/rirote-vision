@@ -1,0 +1,28 @@
+[package]
+name = "rirote-vision"
+description = "RIROTE VISION — an AI video studio for macOS built on HyperFrames"
+authors = ["Rishabh Sisodiya"]
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "rirote_vision_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-single-instance = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+# Stopping the preview server together with the helpers it starts.
+libc = "0.2"
+tokio = { version = "1", features = ["process", "time", "io-util", "macros", "rt", "sync", "net"] }
+
+[dev-dependencies]
+tempfile = "3"
