@@ -31,15 +31,6 @@ export function progressLine(reference: Reference): string {
   }
 }
 
-/** 950 → "950 views", 1 234 → "1.2K views", 3 200 000 → "3.2M views". */
-export function viewsLabel(views: number | null): string | null {
-  if (views === null) return null;
-  const short = (value: number, unit: string) => `${value >= 10 ? Math.round(value) : Math.round(value * 10) / 10}${unit}`;
-  if (views >= 1_000_000) return `${short(views / 1_000_000, "M")} views`;
-  if (views >= 1_000) return `${short(views / 1_000, "K")} views`;
-  return `${views} ${views === 1 ? "view" : "views"}`;
-}
-
 /** 66 → "1:06". */
 export function clock(seconds: number | null): string {
   if (seconds === null || !Number.isFinite(seconds)) return "–";

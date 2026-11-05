@@ -113,10 +113,6 @@ export function HomeScreen(props: HomeScreenProps) {
               library={library}
               selectedId={referenceId}
               onSelect={onSelectReference}
-              onPickFound={async (video) => {
-                const reference = await api.importReference({ link: video.url });
-                onSelectReference(reference.id);
-              }}
             />
           ) : (
             <ProjectGrid

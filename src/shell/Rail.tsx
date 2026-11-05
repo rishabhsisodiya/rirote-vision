@@ -28,23 +28,22 @@ const MAIN: Destination[] = [
   { view: "brands", icon: "brand", label: "Brand kits" },
 ];
 
-/** The column of destinations down the window's left edge. */
+/** The sidebar down the window's left edge: icon and name for each place. */
 export function Rail(props: RailProps) {
   const item = (destination: Destination) => {
     const disabled = destination.view === "editor" && !props.hasProject;
-    const label = destination.keys ? `${destination.label} (${destination.keys})` : destination.label;
     return (
       <button
         key={destination.view}
         type="button"
         className="rail__item"
         aria-label={destination.label}
-        title={disabled ? "Open a project to edit it" : label}
+        title={disabled ? "Open a project to edit it" : destination.keys ? `${destination.label} (${destination.keys})` : destination.label}
         aria-current={props.view === destination.view ? "page" : undefined}
         disabled={disabled}
         onClick={() => props.onNavigate(destination.view)}
       >
-        <Icon name={destination.icon} size={18} />
+        <RailLabel icon={destination.icon} label={destination.label} keys={destination.keys} />
       </button>
     );
   };
@@ -52,14 +51,15 @@ export function Rail(props: RailProps) {
   return (
     <nav className="rail" aria-label="Navigation">
       <div className="rail__drag" data-tauri-drag-region />
-      <span className="rail__mark" aria-hidden="true">
-        RV
+      <span className="rail__brand" aria-hidden="true">
+        <span className="rail__mark">RV</span>
+        <span className="rail__name">RIROTE VISION</span>
       </span>
       <button type="button" className="rail__item" aria-label="Search projects and commands" title="Search (⌘K)" onClick={props.onPalette}>
-        <Icon name="search" size={18} />
+        <RailLabel icon="search" label="Search" keys="⌘K" />
       </button>
       <button type="button" className="rail__item" aria-label="New video" title="New video (⌘N)" onClick={props.onNew}>
-        <Icon name="plus" size={18} />
+        <RailLabel icon="plus" label="New video" keys="⌘N" />
       </button>
       <span className="rail__rule" aria-hidden="true" />
       {MAIN.map(item)}
@@ -67,10 +67,22 @@ export function Rail(props: RailProps) {
       {props.activeJobs > 0 ? (
         <span className="rail__jobs" role="status" title={`${props.activeJobs} job(s) running`}>
           <Icon name="jobs" size={18} />
+          <span className="rail__label">Jobs running</span>
           <span className="rail__badge">{props.activeJobs}</span>
         </span>
       ) : null}
       {item({ view: "settings", icon: "settings", label: "Settings", keys: "⌘," })}
     </nav>
+  );
+}
+
+/** One row's icon, name and shortcut. The name and shortcut hide when the rail is narrow. */
+function RailLabel({ icon, label, keys }: { icon: IconName; label: string; keys?: string }) {
+  return (
+    <>
+      <Icon name={icon} size={18} />
+      <span className="rail__label">{label}</span>
+      {keys ? <kbd className="rail__keys">{keys}</kbd> : null}
+    </>
   );
 }

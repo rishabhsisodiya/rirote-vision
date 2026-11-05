@@ -224,21 +224,9 @@ pub struct Reference {
     pub status: &'static str,
     /// The first shot's still, as a full path, once there is one.
     pub poster: Option<String>,
+    /// The downloaded or dropped video, as a full path, to watch in the app.
+    pub video: Option<String>,
     /// The folder the reference's files are in.
     pub folder: String,
 }
 
-/// A search result: not downloaded until it is picked.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct Found {
-    pub id: String,
-    pub url: String,
-    pub title: String,
-    pub creator: Option<String>,
-    pub duration: Option<f64>,
-    pub views: Option<u64>,
-    pub platform: String,
-    /// A cached copy of the thumbnail, as a full path.
-    pub thumbnail: Option<String>,
-}

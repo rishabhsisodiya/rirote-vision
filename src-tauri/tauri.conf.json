@@ -18,7 +18,6 @@
         "enable": true,
         "scope": [
           "$APPDATA/references/**",
-          "$APPDATA/reference-search/thumbs/**",
           "$APPDATA/media-cache/**",
           "$APPDATA/brand-kits/**",
           "$APPDATA/voice-samples/**"

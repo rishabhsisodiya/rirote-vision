@@ -29,7 +29,6 @@ import type {
   CatalogItem,
   CatalogInstalled,
   ReferenceDetail,
-  FoundVideo,
   Settings,
   TimelineState,
   TrustLevel,
@@ -157,8 +156,6 @@ export const api = {
   retryReference: (id: string) => call<Reference>("reference_retry", { id }),
   stopReference: (id: string) => call<void>("reference_stop", { id }),
   deleteReference: (id: string) => call<void>("reference_delete", { id }),
-  searchReferences: (query: string, source: "youtube" | "instagram") =>
-    call<FoundVideo[]>("reference_search", { query, source }),
   /** `voice`: "" matches the reference, "none" is no voiceover, else a voice id. */
   referenceBrief: (id: string, request: string, voice: string) => call<string>("reference_brief", { id, request, voice }),
   projectPoster: (path: string) => call<string>("project_poster", { path }),

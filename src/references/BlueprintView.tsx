@@ -88,13 +88,17 @@ export function BlueprintView({ blueprint, folder }: BlueprintViewProps) {
             <li key={shot.index} className="shot">
               <span className="shot__still">
                 {shot.keyframe ? <img src={convertFileSrc(`${folder}/${shot.keyframe}`)} alt="" loading="lazy" /> : null}
-                <span className="shot__time mono">{seconds(shot.start)}</span>
               </span>
-              <span className="shot__kind">
-                {shot.shot_type} · {shot.camera_motion} · <span className={`energy energy--${shot.energy}`}>{shot.energy}</span>
+              <span className="shot__body">
+                <span className="shot__kind">
+                  <span className="mono">
+                    {seconds(shot.start)}–{seconds(shot.end)}
+                  </span>{" "}
+                  · {shot.shot_type} · {shot.camera_motion} · <span className={`energy energy--${shot.energy}`}>{shot.energy}</span>
+                </span>
+                <span className="shot__what">{shot.subject_action}</span>
+                {shot.on_screen_text ? <span className="shot__text">Text: {shot.on_screen_text}</span> : null}
               </span>
-              <span className="shot__what">{shot.subject_action}</span>
-              {shot.on_screen_text ? <span className="shot__text">Text: {shot.on_screen_text}</span> : null}
             </li>
           ))}
         </ol>

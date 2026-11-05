@@ -8,7 +8,6 @@ use std::time::Duration;
 
 use serde_json::Value;
 
-use super::model::Found;
 use super::run::{self, Cancel};
 use crate::error::{AppError, AppResult};
 use crate::shell_env;
@@ -18,7 +17,6 @@ const ASSET: &str = "yt-dlp_macos";
 const FETCH_LIMIT: Duration = Duration::from_secs(300);
 const INFO_LIMIT: Duration = Duration::from_secs(60);
 const DOWNLOAD_LIMIT: Duration = Duration::from_secs(20 * 60);
-const SEARCH_LIMIT: Duration = Duration::from_secs(90);
 /// Larger downloads are refused: a reference is studied, not archived.
 pub const MAX_BYTES: &str = "500M";
 
@@ -226,78 +224,6 @@ fn explain(text: &str) -> AppError {
     AppError::Refused(message.into())
 }
 
-/// YouTube search, or an Instagram hashtag with the browser's sign-in.
-pub async fn search(
-    data_dir: &Path,
-    query: &str,
-    source: &str,
-    cookie_browser: Option<&str>,
-    limit: usize,
-    cancel: &Cancel,
-) -> AppResult<Vec<Found>> {
-    let query = query.trim();
-    if query.is_empty() {
-        return Ok(Vec::new());
-    }
-    let target = match source {
-        "youtube" => format!("ytsearch{limit}:{query}"),
-        "instagram" => {
-            let tag: String = query.chars().filter(|c| c.is_alphanumeric() || *c == '_').collect();
-            if tag.is_empty() {
-                return Err(AppError::InvalidInput("Instagram search takes one hashtag, like motiongraphics.".into()));
-            }
-            format!("https://www.instagram.com/explore/tags/{tag}/")
-        }
-        _ => return Err(AppError::InvalidInput("Search YouTube or Instagram.".into())),
-    };
-    let mut command = base(data_dir)?;
-    if let Some(browser) = cookie_browser {
-        command.args(["--cookies-from-browser", browser]);
-    }
-    command.args(["--flat-playlist", "-J", "--playlist-end", &limit.to_string(), "--", &target]);
-    let output = run::run(command, SEARCH_LIMIT, "yt-dlp search", cancel).await?;
-    if !output.status.success() {
-        let said = shell_env::failure_text(&output);
-        if source == "instagram" {
-            return Err(AppError::Refused(
-                "Instagram did not answer the search. Sign in to Instagram in the browser chosen in Settings, then try again. Pasting a reel's link always works.".into(),
-            ));
-        }
-        return Err(explain(&said));
-    }
-    let value: Value = serde_json::from_slice(&output.stdout)
-        .map_err(|_| AppError::ToolFailed("yt-dlp gave an answer the app could not read.".into()))?;
-    Ok(found(&value, source))
-}
-
-fn found(value: &Value, source: &str) -> Vec<Found> {
-    let entries = value.get("entries").and_then(Value::as_array).cloned().unwrap_or_default();
-    entries
-        .iter()
-        .filter_map(|entry| {
-            let text = |key: &str| entry.get(key).and_then(Value::as_str).map(str::to_owned);
-            let id = text("id")?;
-            let url = text("url").or_else(|| text("webpage_url"))?;
-            if entry.get("live_status").and_then(Value::as_str).is_some_and(|live| live == "is_live") {
-                return None;
-            }
-            Some(Found {
-                id,
-                url,
-                title: text("title").unwrap_or_else(|| "Untitled".into()),
-                creator: text("channel").or_else(|| text("uploader")),
-                duration: entry.get("duration").and_then(Value::as_f64),
-                views: entry.get("view_count").and_then(Value::as_u64),
-                platform: source.into(),
-                thumbnail: entry
-                    .get("thumbnails")
-                    .and_then(Value::as_array)
-                    .and_then(|list| list.iter().filter_map(|t| t.get("url").and_then(Value::as_str)).next().map(str::to_owned))
-                    .or_else(|| text("thumbnail")),
-            })
-        })
-        .collect()
-}
 
 #[cfg(test)]
 mod tests {
@@ -327,20 +253,6 @@ mod tests {
         let list = "aaa  yt-dlp\nBBB  yt-dlp_macos\nccc  yt-dlp_macos.zip\n";
         assert_eq!(expected_sum(list, "yt-dlp_macos").as_deref(), Some("bbb"));
         assert_eq!(expected_sum(list, "nothing"), None);
-    }
-
-    #[test]
-    fn search_results_skip_live_streams_and_keep_the_first_thumbnail() {
-        let value: Value = serde_json::json!({"entries": [
-            {"id": "a", "url": "https://youtu.be/a", "title": "One", "channel": "Chan", "duration": 31.0,
-             "view_count": 1200, "thumbnails": [{"url": "https://i.ytimg.com/a.jpg"}]},
-            {"id": "b", "url": "https://youtu.be/b", "title": "Live", "live_status": "is_live"},
-            {"title": "no id"}
-        ]});
-        let list = found(&value, "youtube");
-        assert_eq!(list.len(), 1);
-        assert_eq!(list[0].thumbnail.as_deref(), Some("https://i.ytimg.com/a.jpg"));
-        assert_eq!(list[0].views, Some(1200));
     }
 
     #[test]

@@ -262,8 +262,6 @@ export type ErrorCode =
 export interface Settings {
   assistantModel: "" | "fable" | "opus" | "sonnet";
   assistantEffort: "" | "low" | "medium" | "high" | "xhigh" | "max";
-  instagramSearch: boolean;
-  cookieBrowser: "chrome" | "safari" | "firefox" | "brave" | "edge";
   referenceMaxMinutes: number;
   projectsFolder: string;
 }
@@ -294,6 +292,8 @@ export interface Reference {
   status: "queued" | "running" | "ready" | "failed";
   /** Full path of the first shot's still. */
   poster: string | null;
+  /** Full path of the downloaded or dropped video, once it is on this Mac. */
+  video: string | null;
   folder: string;
 }
 
@@ -339,19 +339,6 @@ export interface Blueprint {
 export interface ReferenceDetail {
   reference: Reference;
   blueprint: Blueprint | null;
-}
-
-/** A search result, not downloaded until it is picked. */
-export interface FoundVideo {
-  id: string;
-  url: string;
-  title: string;
-  creator: string | null;
-  duration: number | null;
-  views: number | null;
-  platform: "youtube" | "instagram";
-  /** Full path of a cached thumbnail. */
-  thumbnail: string | null;
 }
 
 // --- what the timeline draws inside clips (media_cache.rs) -----------------

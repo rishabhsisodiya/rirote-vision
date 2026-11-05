@@ -74,5 +74,6 @@
   --titlebar-height: 44px;
   /* Room for the window's close, minimise and zoom buttons. */
   --traffic-lights: 78px;
-  --rail-width: 56px;
+  --rail-width: 196px;
+  --rail-width-compact: 56px;
 }

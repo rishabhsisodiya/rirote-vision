@@ -6,10 +6,12 @@ import { api, errorMessage } from "../lib/ipc";
 import type { ProjectSummary, Reference } from "../lib/types";
 import { pickVideo } from "../projects/pickFolder";
 import { Button } from "../ui/Button";
+import { Dialog } from "../ui/Dialog";
 import { Icon } from "../ui/Icon";
 import { Notice } from "../ui/Notice";
 import { Spinner } from "../ui/Spinner";
 import { clock, platformName, progressLine } from "./describe";
+import { ReferenceVideo } from "./ReferenceVideo";
 import { UseReference } from "./UseReference";
 
 const VIDEO = /\.(mp4|mov|webm|mkv|m4v)$/i;
@@ -116,8 +118,14 @@ export function ReferenceForm({ selected, onSelect, onStarted, onCheckSetup }: R
 
 function Selected({ reference, onClear, onStarted }: { reference: Reference; onClear: () => void; onStarted: ReferenceFormProps["onStarted"] }) {
   const working = reference.status === "queued" || reference.status === "running";
+  const [watching, setWatching] = useState(false);
   return (
     <div className="home__form">
+      {watching ? (
+        <Dialog title={reference.title ?? reference.source} onClose={() => setWatching(false)}>
+          <ReferenceVideo reference={reference} autoPlay />
+        </Dialog>
+      ) : null}
       <div className="reference-pick">
         <span className="reference-pick__still">
           {reference.poster ? <img src={convertFileSrc(reference.poster)} alt="" /> : working ? <Spinner /> : <Icon name="reference" size={20} />}
@@ -133,6 +141,11 @@ function Selected({ reference, onClear, onStarted }: { reference: Reference; onC
             {progressLine(reference)}
           </span>
         </div>
+        {reference.video ? (
+          <Button icon="play" onClick={() => setWatching(true)}>
+            Watch
+          </Button>
+        ) : null}
         <Button variant="ghost" onClick={onClear}>
           Change
         </Button>

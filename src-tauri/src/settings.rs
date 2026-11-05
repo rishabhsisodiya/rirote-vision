@@ -20,10 +20,6 @@ pub struct Settings {
     pub assistant_model: String,
     /// `--effort` for assistant turns; empty leaves Claude Code's choice.
     pub assistant_effort: String,
-    /// Experimental: search Instagram with the browser's sign-in.
-    pub instagram_search: bool,
-    /// The browser whose sign-in Instagram search borrows.
-    pub cookie_browser: String,
     /// Longest reference video the app will download and study, in minutes.
     pub reference_max_minutes: u32,
     /// Where Home's Make and Script start new projects.
@@ -35,8 +31,6 @@ impl Default for Settings {
         Self {
             assistant_model: String::new(),
             assistant_effort: String::new(),
-            instagram_search: false,
-            cookie_browser: "chrome".into(),
             reference_max_minutes: 10,
             projects_folder: default_projects_folder(),
         }
@@ -49,8 +43,6 @@ fn default_projects_folder() -> String {
         .unwrap_or_default()
 }
 
-const BROWSERS: [&str; 5] = ["chrome", "safari", "firefox", "brave", "edge"];
-
 impl Settings {
     fn validate(&self) -> AppResult<()> {
         if !MODELS.contains(&self.assistant_model.as_str()) {
@@ -58,9 +50,6 @@ impl Settings {
         }
         if !EFFORTS.contains(&self.assistant_effort.as_str()) {
             return Err(AppError::InvalidInput(format!("Unknown effort “{}”.", self.assistant_effort)));
-        }
-        if !BROWSERS.contains(&self.cookie_browser.as_str()) {
-            return Err(AppError::InvalidInput(format!("Unknown browser “{}”.", self.cookie_browser)));
         }
         if !Path::new(&self.projects_folder).is_absolute() {
             return Err(AppError::InvalidInput("Choose a folder for new projects.".into()));
@@ -117,13 +106,17 @@ mod tests {
         let read = store.get();
         assert_eq!(read.assistant_model, "opus");
         assert_eq!(read.reference_max_minutes, 10);
+        // Fields this version no longer has, like the old Instagram search, are ignored.
+        std::fs::write(dir.path().join("settings.json"), r#"{"instagramSearch":true,"cookieBrowser":"safari"}"#).unwrap();
+        assert_eq!(store.get(), Settings::default());
+        std::fs::write(dir.path().join("settings.json"), r#"{"assistantModel":"opus"}"#).unwrap();
 
         let bad = Settings { assistant_model: "gpt".into(), ..Settings::default() };
         assert_eq!(store.set(bad).unwrap_err().code(), "invalid_input");
         let long = Settings { reference_max_minutes: 90, ..Settings::default() };
         assert_eq!(store.set(long).unwrap_err().code(), "invalid_input");
 
-        let good = Settings { instagram_search: true, ..Settings::default() };
+        let good = Settings { reference_max_minutes: 20, ..Settings::default() };
         store.set(good.clone()).unwrap();
         assert_eq!(store.get(), good);
     }

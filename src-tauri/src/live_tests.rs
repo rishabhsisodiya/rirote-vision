@@ -593,7 +593,7 @@ Then reply with the single word done.",
 }
 
 #[tokio::test]
-#[ignore = "downloads yt-dlp and the engine, searches YouTube and runs Claude Code on your plan"]
+#[ignore = "downloads yt-dlp and the engine and runs Claude Code on your plan"]
 async fn a_reference_is_studied_end_to_end() {
     use crate::reference::{model::StepState, ytdlp, ReferenceService};
     use crate::settings::Settings;
@@ -650,13 +650,6 @@ async fn a_reference_is_studied_end_to_end() {
     // Adding the same file again returns the studied reference.
     let again = service.import(None, Some(clip.to_string_lossy().into_owned()), &settings).await.unwrap();
     assert_eq!((again.meta.id.as_str(), again.status), (added.meta.id.as_str(), "ready"));
-
-    let found = service.search("product launch video", "youtube", &settings).await.expect("YouTube search");
-    println!("{} results; first: {:?}", found.len(), found.first());
-    assert!(found.len() >= 5);
-    assert!(found.iter().filter(|item| item.thumbnail.is_some()).count() >= 3, "thumbnails are cached");
-    let refused = service.search("motiongraphics", "instagram", &settings).await.unwrap_err();
-    assert_eq!(refused.code(), "refused", "Instagram is off unless Settings allow it");
 
     service.delete(&added.meta.id).unwrap();
     assert!(service.list().is_empty());

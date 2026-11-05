@@ -22,13 +22,10 @@ use tokio::sync::Notify;
 use crate::error::{AppError, AppResult};
 use crate::settings::Settings;
 use crate::{hyperframes, ids, log, shell_env, store};
-use model::{Blueprint, Found, Reference, ReferenceMeta, Run, ShotList, StepState, Word};
+use model::{Blueprint, Reference, ReferenceMeta, Run, ShotList, StepState, Word};
 use run::Cancel;
 
 const TRANSCRIBE_LIMIT: Duration = Duration::from_secs(20 * 60);
-const THUMB_LIMIT: Duration = Duration::from_secs(20);
-const SEARCH_CACHE: Duration = Duration::from_secs(24 * 60 * 60);
-const SEARCH_LIMIT: usize = 24;
 const MAX_FILE_BYTES: u64 = 500 * 1024 * 1024;
 
 /// Where a study's video comes from.
@@ -135,7 +132,8 @@ impl ReferenceService {
             .map(|still| dir.join(still))
             .filter(|path| path.is_file())
             .map(|path| path.to_string_lossy().into_owned());
-        Some(Reference { meta, steps: run.steps, status, poster, folder: dir.to_string_lossy().into_owned() })
+        let video = ytdlp::find_source(&dir).map(|path| path.to_string_lossy().into_owned());
+        Some(Reference { meta, steps: run.steps, status, poster, video, folder: dir.to_string_lossy().into_owned() })
     }
 
     /// Newest first.
@@ -448,49 +446,6 @@ impl ReferenceService {
         store::write_atomic(&dir.join("transcript.json"), &words)
     }
 
-    /// YouTube search, or an Instagram hashtag when Settings allow it. Results
-    /// and their thumbnails are kept for a day.
-    pub async fn search(&self, query: &str, source: &str, settings: &Settings) -> AppResult<Vec<Found>> {
-        let cookies = match source {
-            "instagram" if !settings.instagram_search => {
-                return Err(AppError::Refused("Instagram search is off. Turn it on in Settings first.".into()));
-            }
-            "instagram" => Some(settings.cookie_browser.as_str()),
-            _ => None,
-        };
-        let cache_dir = self.data_dir.join("reference-search");
-        let cache = cache_dir.join(format!("{source}-{:016x}.json", ids::fnv1a(query.trim().to_lowercase().as_bytes())));
-        if let Ok(modified) = std::fs::metadata(&cache).and_then(|m| m.modified()) {
-            if modified.elapsed().unwrap_or(SEARCH_CACHE) < SEARCH_CACHE {
-                let cached: Vec<Found> = store::read_or_default(&cache);
-                if !cached.is_empty() {
-                    return Ok(cached);
-                }
-            }
-        }
-        let mut found = ytdlp::search(&self.data_dir, query, source, cookies, SEARCH_LIMIT, &Cancel::default()).await?;
-        let thumbs = cache_dir.join("thumbs");
-        std::fs::create_dir_all(&thumbs)?;
-        let mut fetches = Vec::new();
-        for item in &found {
-            let target = thumbs.join(format!("{}.jpg", case_safe_id(&item.platform, &item.id)));
-            if let Some(url) = item.thumbnail.clone().filter(|url| url.starts_with("https://")) {
-                if !target.is_file() {
-                    fetches.push(tokio::spawn(fetch(url, target.clone())));
-                }
-            }
-        }
-        for fetch in fetches {
-            let _ = fetch.await;
-        }
-        for item in &mut found {
-            let target = thumbs.join(format!("{}.jpg", case_safe_id(&item.platform, &item.id)));
-            item.thumbnail = target.is_file().then(|| target.to_string_lossy().into_owned());
-        }
-        store::write_atomic(&cache, &found)?;
-        Ok(found)
-    }
-
     /// The assistant's brief for an original video in the reference's format.
     pub fn brief(&self, id: &str, request: &str, narration: Narration) -> AppResult<String> {
         let detail = self.get(id)?;
@@ -505,20 +460,6 @@ impl ReferenceService {
 fn read_json<T: serde::de::DeserializeOwned>(file: &Path) -> AppResult<T> {
     let text = std::fs::read_to_string(file).map_err(|_| AppError::NotFound(format!("{} is missing; study the reference again.", file.file_name().unwrap_or_default().to_string_lossy())))?;
     serde_json::from_str(&text).map_err(|error| AppError::Io(format!("{}: {error}", file.display())))
-}
-
-async fn fetch(url: String, target: PathBuf) {
-    let Some(curl) = shell_env::find_program("curl") else { return };
-    let draft = target.with_extension("part");
-    let mut command = shell_env::command(&curl);
-    command.args(["-fsSL", "--max-filesize", "2000000", "-o"]).arg(&draft).arg(&url);
-    if let Ok(output) = shell_env::run(command, THUMB_LIMIT, "thumbnail").await {
-        if output.status.success() {
-            let _ = std::fs::rename(&draft, &target);
-            return;
-        }
-    }
-    let _ = std::fs::remove_file(&draft);
 }
 
 /// Fewer words than this is a few stray sounds, not someone speaking.

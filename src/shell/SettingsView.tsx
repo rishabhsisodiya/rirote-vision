@@ -20,7 +20,6 @@ const MODELS: { value: Settings["assistantModel"]; label: string }[] = [
   { value: "sonnet", label: "Sonnet" },
 ];
 const EFFORTS: Settings["assistantEffort"][] = ["", "low", "medium", "high", "xhigh", "max"];
-const BROWSERS: Settings["cookieBrowser"][] = ["chrome", "safari", "firefox", "brave", "edge"];
 
 /** The app's preferences. Each change is saved as it is made. */
 export function SettingsView({ setup, onCheckSetup }: SettingsViewProps) {
@@ -116,30 +115,6 @@ export function SettingsView({ setup, onCheckSetup }: SettingsViewProps) {
                 {[3, 5, 10, 20, 30].map((minutes) => (
                   <option key={minutes} value={minutes}>
                     {minutes} minutes
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="field field--check">
-              <input type="checkbox" checked={settings.instagramSearch} onChange={(event) => void change({ instagramSearch: event.target.checked })} />
-              <span>
-                Search Instagram <span className="tag">experimental</span>
-                <small>
-                  Uses the Instagram sign-in already in your browser, for that search only. Instagram may limit or flag
-                  accounts that search this way.
-                </small>
-              </span>
-            </label>
-            <label className="field">
-              <span>Browser to borrow the sign-in from</span>
-              <select
-                value={settings.cookieBrowser}
-                disabled={!settings.instagramSearch}
-                onChange={(event) => void change({ cookieBrowser: event.target.value as Settings["cookieBrowser"] })}
-              >
-                {BROWSERS.map((browser) => (
-                  <option key={browser} value={browser}>
-                    {browser.charAt(0).toUpperCase() + browser.slice(1)}
                   </option>
                 ))}
               </select>

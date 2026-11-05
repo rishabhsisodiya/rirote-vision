@@ -10,6 +10,7 @@ import { Icon } from "../ui/Icon";
 import { Notice } from "../ui/Notice";
 import { Spinner } from "../ui/Spinner";
 import { BlueprintView } from "./BlueprintView";
+import { ReferenceVideo } from "./ReferenceVideo";
 import { clock, platformName, progressLine } from "./describe";
 import type { ReferencesState } from "./useReferences";
 import { UseReference } from "./UseReference";
@@ -137,30 +138,34 @@ function Detail({ id, version, onStarted, onDeleted }: { id: string; version: st
         </div>
       </header>
 
-      <ol className="steps" aria-label="Study steps">
-        {reference.steps.map((step) => (
-          <li key={step.name} className={`steps__item steps__item--${step.state}`} title={step.error ?? undefined}>
-            <span className="steps__dot" aria-hidden="true" />
-            {step.name}
-            {step.seconds !== null && step.state === "done" ? <span className="mono"> {step.seconds.toFixed(1)}s</span> : null}
-          </li>
-        ))}
-      </ol>
-      {reference.status !== "ready" ? (
-        <p className={`references__status references__status--${reference.status}`} role="status">
-          {working ? <Spinner /> : null} {progressLine(reference)}
-        </p>
-      ) : null}
+      {/* The video on the left, the study's progress and "make one like it" beside it. */}
+      <div className={`references__lead ${reference.video ? "" : "references__lead--no-video"}`}>
+        <ReferenceVideo key={reference.id} reference={reference} />
+        <div className="references__lead-side">
+          <ol className="steps" aria-label="Study steps">
+            {reference.steps.map((step) => (
+              <li key={step.name} className={`steps__item steps__item--${step.state}`} title={step.error ?? undefined}>
+                <span className="steps__dot" aria-hidden="true" />
+                {step.name}
+                {step.seconds !== null && step.state === "done" ? <span className="mono"> {step.seconds.toFixed(1)}s</span> : null}
+              </li>
+            ))}
+          </ol>
+          {reference.status !== "ready" ? (
+            <p className={`references__status references__status--${reference.status}`} role="status">
+              {working ? <Spinner /> : null} {progressLine(reference)}
+            </p>
+          ) : null}
+          {blueprint ? (
+            <section className="references__use" aria-labelledby="use-heading">
+              <h3 id="use-heading">Make a video in this format</h3>
+              <UseReference reference={reference} onStarted={onStarted} />
+            </section>
+          ) : null}
+        </div>
+      </div>
 
-      {blueprint ? (
-        <>
-          <section className="references__use" aria-labelledby="use-heading">
-            <h3 id="use-heading">Make a video in this format</h3>
-            <UseReference reference={reference} onStarted={onStarted} />
-          </section>
-          <BlueprintView blueprint={blueprint} folder={reference.folder} />
-        </>
-      ) : null}
+      {blueprint ? <BlueprintView blueprint={blueprint} folder={reference.folder} /> : null}
     </div>
   );
 }

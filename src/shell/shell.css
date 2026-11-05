@@ -8,7 +8,7 @@
 
 .shell__main {
   /* The window's buttons sit over the rail and spill this far into the screen. */
-  --traffic-lights: calc(78px - var(--rail-width));
+  --traffic-lights: max(0px, calc(78px - var(--rail-width)));
   position: relative;
   min-width: 0;
   min-height: 0;
@@ -27,38 +27,79 @@
 .rail {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding-bottom: var(--space-3);
+  align-items: stretch;
+  gap: 2px;
+  min-width: 0;
+  padding: 0 var(--space-2) var(--space-3);
   border-right: 1px solid var(--line);
   background: var(--surface);
 }
 
 .rail__drag {
-  align-self: stretch;
   height: var(--titlebar-height);
   flex: none;
 }
 
+.rail__brand {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+  padding: 0 10px;
+  white-space: nowrap;
+}
+
 .rail__mark {
-  margin-bottom: var(--space-2);
   color: var(--accent);
   font: 400 22px / 1 var(--font-display);
   letter-spacing: 0.04em;
 }
 
+.rail__name {
+  overflow: hidden;
+  color: var(--muted);
+  font: 400 15px / 1 var(--font-display);
+  letter-spacing: 0.12em;
+  text-overflow: ellipsis;
+}
+
 .rail__item,
 .rail__jobs {
   position: relative;
-  display: grid;
-  place-items: center;
-  width: 38px;
-  height: 38px;
-  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
   border: 0;
   border-radius: var(--radius-pane);
   background: none;
   color: var(--muted);
+  font: inherit;
+  text-align: left;
+}
+
+.rail__item svg,
+.rail__jobs svg {
+  flex: none;
+}
+
+.rail__label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--text-body, 13px);
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rail__keys {
+  flex: none;
+  color: var(--muted);
+  font: 400 11px / 1 var(--font-data);
+  opacity: 0.7;
 }
 
 .rail__item:hover:not(:disabled) {
@@ -77,9 +118,8 @@
 }
 
 .rail__rule {
-  width: 24px;
   height: 1px;
-  margin: var(--space-1) 0;
+  margin: var(--space-2) 10px;
   background: var(--line);
 }
 
@@ -88,16 +128,60 @@
 }
 
 .rail__badge {
-  position: absolute;
-  top: 2px;
-  right: 0;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  border-radius: 8px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
   background: var(--cue);
   color: #04130c;
-  font: 700 10px / 16px var(--font-data);
+  font: 700 10px / 18px var(--font-data);
+  text-align: center;
+}
+
+/* A narrow window keeps the room for the editor: icons only. */
+@media (max-width: 1240px) {
+  .shell {
+    --rail-width: var(--rail-width-compact);
+  }
+
+  .rail {
+    align-items: center;
+    padding: 0 0 var(--space-3);
+  }
+
+  .rail__name,
+  .rail__label,
+  .rail__keys {
+    display: none;
+  }
+
+  .rail__brand {
+    padding: 0;
+    margin-bottom: var(--space-2);
+  }
+
+  .rail__item,
+  .rail__jobs {
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+  }
+
+  .rail__rule {
+    width: 24px;
+    margin: var(--space-1) 0;
+  }
+
+  .rail__badge {
+    position: absolute;
+    top: 2px;
+    right: 0;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    line-height: 16px;
+  }
 }
 
 /* ---- screens other than the editor share a header ---- */

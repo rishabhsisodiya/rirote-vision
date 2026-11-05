@@ -160,16 +160,6 @@ fn reference_delete(state: State<'_, AppState>, id: String) -> AppResult<()> {
 }
 
 #[tauri::command]
-async fn reference_search(
-    state: State<'_, AppState>,
-    query: String,
-    source: String,
-) -> AppResult<Vec<reference::model::Found>> {
-    let settings = state.settings.get();
-    state.references.search(&query, &source, &settings).await
-}
-
-#[tauri::command]
 fn reference_brief(state: State<'_, AppState>, id: String, request: String, voice: Option<String>) -> AppResult<String> {
     let voice = voice.unwrap_or_default();
     state.references.brief(&id, &request, reference::Narration::from_choice(&voice))
@@ -705,7 +695,6 @@ pub fn run() {
             reference_retry,
             reference_stop,
             reference_delete,
-            reference_search,
             reference_brief,
             media_list,
             media_import,
