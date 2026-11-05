@@ -37,6 +37,14 @@ const PATHS = {
   spark: "M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.4Z",
   media: "M4 5h16v14H4ZM4 15l4.5-4.5 4 4 2.5-2.5 5 5",
   reveal: "M14 5h5v5M19 5l-8 8M11 7H6a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-5",
+  search: "M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14ZM20 20l-3.5-3.5",
+  home: "M4 11 12 4l8 7v9H4Z",
+  editor: "M3 5h18v14H3ZM3 15h18M8 15v4",
+  reference: "M4 5h16v14H4ZM10 9l5 3-5 3Z",
+  brand: "M8 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM16 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM12 19a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z",
+  jobs: "M12 4v11M8 11l4 4 4-4M5 20h14",
+  settings: "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1",
+  command: "M9 6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3Z",
 } as const;
 
 export type IconName = keyof typeof PATHS;

@@ -75,6 +75,7 @@ const INSTALL_LABEL: Record<SetupAction, string> = {
   "install-engine": "Install Video Engine",
   "install-voice": "Install Voiceover and Music",
   "install-skills": "Install Video Skills",
+  "install-ytdlp": "Install yt-dlp",
 };
 
 interface CheckRowProps {
@@ -108,7 +109,11 @@ function CheckRow({ check, installing, disabled, onInstall }: CheckRowProps) {
           busy={installing === action}
           disabled={disabled}
         >
-          {installing === action ? "Installing" : INSTALL_LABEL[action]}
+          {installing === action
+            ? "Installing"
+            : check.status === "ok" && action === "install-ytdlp"
+              ? "Update yt-dlp"
+              : INSTALL_LABEL[action]}
         </Button>
       ) : null}
     </li>

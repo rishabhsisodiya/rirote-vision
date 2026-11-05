@@ -15,7 +15,11 @@ export type MenuCommand =
   | "clip.delete"
   | "help.shortcuts"
   | "view.sidebar"
-  | "view.assistant";
+  | "view.assistant"
+  | "view.palette"
+  | "view.home"
+  | "view.editor"
+  | "app.settings";
 
 /** Runs `handler` when an item is chosen from the menu bar. */
 export function useMenu(handler: (command: MenuCommand) => void): void {

@@ -45,8 +45,9 @@
 
 .transport {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-1) var(--space-3);
   flex: none;
   padding: var(--space-2) var(--space-3);
   border-top: 1px solid var(--line);
@@ -66,7 +67,7 @@
 }
 
 .transport__time {
-  min-width: 15ch;
+  min-width: 13ch;
   font-family: var(--font-data);
   font-size: 12px;
   text-align: right;
@@ -141,3 +142,88 @@
   opacity: 0.4;
 }
 
+
+/* ---- backdrops behind the picture ---- */
+
+.preview__picture--dark {
+  background: var(--stage);
+}
+
+.preview__picture--grey {
+  background: #3a4150;
+}
+
+.preview__picture--white {
+  background: #f4f5f7;
+}
+
+.preview__picture--checker {
+  background: repeating-conic-gradient(#2a3242 0 25%, #1b2130 0 50%) 0 0 / 20px 20px;
+}
+
+/* ---- safe-zone guides: a box sized like the frame inside the player ---- */
+
+.guides {
+  position: absolute;
+  inset: var(--space-3);
+  display: grid;
+  place-items: center;
+  container-type: size;
+  pointer-events: none;
+}
+
+.guides__frame {
+  position: relative;
+  width: min(100cqw, calc(100cqh * var(--aspect)));
+  aspect-ratio: var(--ratio);
+}
+
+.guides__safe,
+.guides__covered {
+  position: absolute;
+  font: 600 10px var(--font-ui);
+  letter-spacing: 0.04em;
+}
+
+.guides__safe {
+  border: 1px dashed rgba(255, 255, 255, 0.55);
+}
+
+.guides__safe > span {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  color: rgba(255, 255, 255, 0.75);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.guides__covered {
+  display: grid;
+  place-items: center;
+  background: rgba(255, 77, 94, 0.14);
+  color: rgba(255, 210, 214, 0.9);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.transport__view {
+  gap: var(--space-1);
+  padding-left: var(--space-2);
+  border-left: 1px solid var(--line);
+}
+
+.transport__select {
+  height: 26px;
+  width: 96px;
+  padding: 0 6px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  background: var(--stage);
+  color: var(--text-soft);
+  font-size: var(--text-small);
+}
+
+.transport__scrubber.transport__volume {
+  flex: none;
+  width: 72px;
+  min-width: 0;
+}

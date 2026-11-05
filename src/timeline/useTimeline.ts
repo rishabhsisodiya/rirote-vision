@@ -67,11 +67,16 @@ export function useTimeline(projectPath: string, signature: string | null) {
     (op: EditOp) => change(() => api.editTimeline(projectPath, op)),
     [change, projectPath],
   );
+  /** Removes stretches of one clip and pulls the rest back: one undo step. */
+  const cut = useCallback(
+    (clip: string, ranges: [number, number][]) => change(() => api.cutTimeline(projectPath, clip, ranges)),
+    [change, projectPath],
+  );
   const undo = useCallback(() => change(() => api.undoTimeline(projectPath)), [change, projectPath]);
   const redo = useCallback(() => change(() => api.redoTimeline(projectPath)), [change, projectPath]);
   const dismissNotice = useCallback(() => setNotice(null), []);
 
-  return { view, busy, notice, dismissNotice, reload: load, edit, undo, redo };
+  return { view, busy, notice, dismissNotice, reload: load, edit, cut, undo, redo };
 }
 
 export type TimelineControls = ReturnType<typeof useTimeline>;

@@ -23,7 +23,7 @@ export const TRUST_OPTIONS: TrustOption[] = [
     value: "trusted",
     label: "Trusted video work",
     allows:
-      "Also creates, copies, moves and deletes files in this project, and runs the video engine, this project's own scripts, ffmpeg and ffprobe.",
+      "Also creates, copies, moves and deletes files in this project, runs the video engine, this project's own scripts, ffmpeg and ffprobe, and reads project files with commands like cat, head and ls.",
     asks: "Still asks before anything outside this folder, downloads, installs and any other program.",
   },
   {
@@ -34,8 +34,8 @@ export const TRUST_OPTIONS: TrustOption[] = [
   },
 ];
 
-/** The level offered first to someone who has not chosen yet. */
-export const DEFAULT_TRUST: TrustLevel = "trusted";
+/** The level of a project where none was chosen; matches `Trust::DEFAULT` in Rust. */
+export const DEFAULT_TRUST: TrustLevel = "full";
 
 export function trustLabel(level: TrustLevel): string {
   return TRUST_OPTIONS.find((option) => option.value === level)?.label ?? level;

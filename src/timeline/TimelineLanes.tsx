@@ -1,3 +1,4 @@
+import { convertFileSrc } from "@tauri-apps/api/core";
 import { memo, useEffect, useRef, useState, type PointerEvent } from "react";
 
 import { formatDuration } from "../lib/format";
@@ -12,6 +13,8 @@ import {
   type Lane,
   type Span,
 } from "./model";
+import type { MediaVisual } from "./useMediaVisuals";
+import { placedStills, waveBars } from "./visuals";
 
 /** A press becomes a drag after this many pixels. */
 const DRAG_START_PX = 3;
@@ -51,11 +54,15 @@ interface TimelineLanesProps {
   onSelect: (clip: string | null) => void;
   onSeek: (seconds: number) => void;
   onEdit: (op: EditOp) => void;
+  /** Waveforms and stills by media file. */
+  visuals: Map<string, MediaVisual>;
+  /** Clips the assistant is changing right now: their tally is lit. */
+  live: Set<string>;
 }
 
 /** The tracks and their clips. Clips are dragged to move and by their edges to trim. */
 export const TimelineLanes = memo(function TimelineLanes(props: TimelineLanesProps) {
-  const { lanes, clips, duration, pxPerSecond, selected, locked, onSelect, onSeek, onEdit } = props;
+  const { lanes, clips, duration, pxPerSecond, selected, locked, onSelect, onSeek, onEdit, visuals, live } = props;
   const [drag, setDrag] = useState<Drag | null>(null);
   const targets = useRef<number[]>([]);
   const boxes = useRef<LaneBox[]>([]);
@@ -144,7 +151,9 @@ export const TimelineLanes = memo(function TimelineLanes(props: TimelineLanesPro
                 clip.ref === selected ? "clip--selected" : "",
                 clip.editable ? "" : "clip--locked",
                 dragged ? "clip--dragging" : "",
+                live.has(clip.ref) ? "clip--live" : "",
               ].join(" ");
+              const visual = clip.src ? visuals.get(clip.src) : undefined;
               return (
                 <div
                   key={clip.ref}
@@ -174,6 +183,7 @@ export const TimelineLanes = memo(function TimelineLanes(props: TimelineLanesPro
                       onPointerCancel={() => setDrag(null)}
                     />
                   ) : null}
+                  {visual ? <ClipVisual clip={clip} visual={visual} pxPerSecond={pxPerSecond} width={(span.end - span.start) * pxPerSecond} /> : null}
                   <span className="clip__name">{name}</span>
                   {clip.editable ? (
                     <span
@@ -193,3 +203,21 @@ export const TimelineLanes = memo(function TimelineLanes(props: TimelineLanesPro
     </div>
   );
 });
+
+/** A clip's stills behind it and its waveform along the bottom. */
+function ClipVisual({ clip, visual, pxPerSecond, width }: { clip: Clip; visual: MediaVisual; pxPerSecond: number; width: number }) {
+  const bars = visual.peaks ? waveBars(clip, visual.peaks, pxPerSecond, Math.min(width, 6000)) : [];
+  const stills = visual.stills ? placedStills(clip, visual.stills, pxPerSecond) : [];
+  return (
+    <span className="clip__visual" aria-hidden="true">
+      {stills.map(({ still, left }) => (
+        <img key={still.path} className="clip__still" src={convertFileSrc(still.path)} alt="" style={{ left }} />
+      ))}
+      {bars.length ? (
+        <svg className="clip__wave" viewBox={`0 0 ${bars.length * 3} 20`} preserveAspectRatio="none">
+          <path d={bars.map((height, index) => `M${index * 3 + 1} ${20 - Math.max(0.6, height * 20)}V20`).join("")} />
+        </svg>
+      ) : null}
+    </span>
+  );
+}

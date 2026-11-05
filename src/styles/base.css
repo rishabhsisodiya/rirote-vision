@@ -24,8 +24,10 @@ body {
 
 h1,
 h2,
+h3,
 p,
 ul,
+ol,
 dl,
 dd,
 fieldset {
@@ -33,7 +35,8 @@ fieldset {
   padding: 0;
 }
 
-ul {
+ul,
+ol {
   list-style: none;
 }
 

@@ -1,0 +1,249 @@
+/* Home: start a video on the left, your projects or references on the right. */
+
+.home {
+  overflow: hidden;
+}
+
+.home__title::before {
+  /* The cue light: the room is ready. */
+  content: "";
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 14px;
+  border-radius: 50%;
+  background: var(--cue);
+  box-shadow: 0 0 0 4px rgba(6, 214, 160, 0.18);
+  vertical-align: 0.25em;
+}
+
+.home__body {
+  display: grid;
+  grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
+  gap: var(--space-4);
+  flex: 1;
+  min-height: 0;
+}
+
+.home__panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pane);
+  background: var(--surface);
+}
+
+.home__tabs {
+  display: flex;
+  gap: var(--space-1);
+  padding: 6px;
+  border-bottom: 1px solid var(--line);
+}
+
+.home__tabs button {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 8px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.home__tabs button:hover {
+  color: var(--text);
+}
+
+.home__tabs button[aria-selected="true"] {
+  background: var(--surface-raised);
+  color: var(--text);
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+.home__tabpanel {
+  flex: 1;
+  min-height: 0;
+  padding: var(--space-4);
+  overflow-y: auto;
+}
+
+.home__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.home__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.home__go {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.home__hint {
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+
+.home__panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-4) var(--space-3);
+}
+
+.home__panel-head h2 {
+  font: 400 var(--text-heading) / 1 var(--font-display);
+  letter-spacing: 0.02em;
+}
+
+.home__state {
+  padding: var(--space-4);
+  color: var(--muted);
+}
+
+.home__projects {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.project-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(176px, 1fr));
+  gap: var(--space-4);
+  padding: 0 var(--space-4) var(--space-4);
+  overflow-y: auto;
+}
+
+.project-card {
+  position: relative;
+}
+
+.project-card__open {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+}
+
+.project-card__poster {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pane);
+  background: var(--stage);
+}
+
+.project-card__poster img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.project-card__open:hover:not(:disabled) .project-card__poster {
+  border-color: var(--accent);
+}
+
+.project-card__open:disabled {
+  opacity: 0.55;
+}
+
+.project-card__initial {
+  color: var(--line-strong);
+  font: 400 56px / 1 var(--font-display);
+  text-transform: uppercase;
+}
+
+.project-card__name {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-card__meta {
+  display: flex;
+  gap: var(--space-2);
+  min-width: 0;
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+
+.project-card__path {
+  overflow: hidden;
+  font-family: var(--font-data);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-card__missing {
+  color: var(--mark);
+}
+
+.project-card__forget {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: rgba(5, 12, 24, 0.75);
+  opacity: 0;
+}
+
+.project-card:hover .project-card__forget,
+.project-card__forget:focus-visible {
+  opacity: 1;
+}
+
+.setup-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid rgba(255, 209, 102, 0.4);
+  border-radius: var(--radius-control);
+  background: rgba(255, 209, 102, 0.08);
+  color: var(--warning);
+}
+
+.setup-banner p {
+  flex: 1;
+  color: var(--text);
+}
+
+.setup-banner .button {
+  color: var(--text);
+}
+
+@media (max-width: 900px) {
+  .home {
+    overflow-y: auto;
+  }
+
+  .home__body {
+    grid-template-columns: 1fr;
+  }
+}
+
+.project-card__meta > span:first-child {
+  flex: none;
+  white-space: nowrap;
+}

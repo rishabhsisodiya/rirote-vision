@@ -5,12 +5,13 @@ import { useEffect, useRef, useState } from "react";
  * Files dragged from Finder onto the window. Returns true while a drag is
  * over the window; `onDrop` gets the dropped files' paths.
  */
-export function useFileDrop(onDrop: (paths: string[]) => void): boolean {
+export function useFileDrop(onDrop: (paths: string[]) => void, enabled = true): boolean {
   const [over, setOver] = useState(false);
   const latest = useRef(onDrop);
   latest.current = onDrop;
 
   useEffect(() => {
+    if (!enabled) return;
     const stop = getCurrentWebview().onDragDropEvent(({ payload }) => {
       if (payload.type === "enter" || payload.type === "over") setOver(true);
       else setOver(false);
@@ -18,8 +19,9 @@ export function useFileDrop(onDrop: (paths: string[]) => void): boolean {
     });
     return () => {
       void stop.then((unlisten) => unlisten());
+      setOver(false);
     };
-  }, []);
+  }, [enabled]);
 
   return over;
 }

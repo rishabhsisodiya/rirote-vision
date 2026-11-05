@@ -10,6 +10,7 @@
 mod chat;
 mod claude;
 mod policy;
+mod readonly;
 mod service;
 
 use std::path::Path;
@@ -37,6 +38,9 @@ pub struct Turn<'a> {
     pub rules: &'a [Rule],
     /// The app's own folder, where the tools it hands the agent live.
     pub data_dir: &'a Path,
+    /// `--model` and `--effort` from Settings; empty leaves Claude Code's choice.
+    pub model: &'a str,
+    pub effort: &'a str,
 }
 
 /// Something the agent's output said, in terms the app understands.

@@ -6,7 +6,7 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::{hyperframes, shell_env, skills};
+use crate::{hyperframes, reference, shell_env, skills};
 
 const MIN_NODE_MAJOR: u32 = 22;
 const QUICK_TIMEOUT: Duration = Duration::from_secs(15);
@@ -16,6 +16,7 @@ const ENGINE_CHECK_TIMEOUT: Duration = Duration::from_secs(60);
 const ACTION_INSTALL_ENGINE: &str = "install-engine";
 const ACTION_INSTALL_VOICE: &str = "install-voice";
 const ACTION_INSTALL_SKILLS: &str = "install-skills";
+const ACTION_INSTALL_YTDLP: &str = "install-ytdlp";
 
 #[derive(Debug, Clone, Copy, Serialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
@@ -65,7 +66,22 @@ pub async fn run(data_dir: &Path) -> Report {
         }
     }
     checks.append(&mut engine);
+    checks.push(check_ytdlp(data_dir).await);
     Report::new(checks)
+}
+
+/// Optional: only studying a reference from a link needs it.
+async fn check_ytdlp(data_dir: &Path) -> Check {
+    let (status, detail, hint, action) = match reference::ytdlp::version(data_dir).await {
+        Some(version) => (Status::Ok, format!("yt-dlp {version}"), Some("Update it when a site stops downloading.".into()), Some(ACTION_INSTALL_YTDLP)),
+        None => (
+            Status::Warning,
+            "Not installed (optional — needed to study a reference from a link)".into(),
+            Some("Downloads the official yt-dlp build from GitHub and checks it against its published checksum.".into()),
+            Some(ACTION_INSTALL_YTDLP),
+        ),
+    };
+    Check { id: "ytdlp", label: "Reference downloads", status, detail, hint, required: false, action }
 }
 
 async fn check_claude() -> Check {
@@ -277,7 +293,7 @@ fn engine_tools(report: &Value) -> Vec<Check> {
                 status,
                 detail: text("detail").unwrap_or_default(),
                 hint: if voice {
-                    Some("A one-time download into the app's own folder. Needs Python 3.10 to 3.13 on this Mac.".into())
+                    Some("Free male and female voices. A one-time download of about 400 MB into the app's own folder; nothing else is needed.".into())
                 } else {
                     text("hint")
                 },

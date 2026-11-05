@@ -120,7 +120,8 @@ const TOOL_VERBS: Record<string, string> = {
   Edit: "Edited",
   MultiEdit: "Edited",
   NotebookEdit: "Edited",
-  Bash: "Ran",
+  // A shell step is shown by its own description ("Checked the reel"), so it needs no verb.
+  Bash: "",
   Glob: "Looked for",
   Grep: "Searched for",
   Skill: "Used skill",
@@ -133,7 +134,9 @@ const TOOL_VERBS: Record<string, string> = {
 
 /** "Edited" for Edit, and the tool's own name for one the app does not know. */
 export function toolVerb(tool: string | undefined): string {
-  return (tool && TOOL_VERBS[tool]) || tool || "Used a tool";
+  const verb = tool === undefined ? undefined : TOOL_VERBS[tool];
+  if (verb !== undefined) return verb;
+  return tool || "Used a tool";
 }
 
 export type Inline = { text: string; style: "plain" | "code" | "strong" };

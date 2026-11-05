@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RIROTE VISION · Art directions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=Caveat:wght@600&display=swap" rel="stylesheet">
+<style>
+/* ==============================================================
+   RIROTE VISION · three art directions on one layout (2026-11-04)
+   The layout follows the HyperFrames desktop app (rail, Make/Reference/Script
+   home, chat | picture | inspector, timeline + transcript). The identity does not.
+
+   A "Control Room"  — a broadcast gallery. Rirote navy, tally lights, timecode.
+   B "Cutting Room"  — a film editor's bench. Darkroom brown, safelight amber,
+                       contact sheets, grease-pencil marks.
+   C "Storyboard"    — a blueprint table. Cyan rules on navy, numbered panels,
+                       the reference laid out as a ghost track.
+   ============================================================== */
+:root, [data-dir="A"]{
+  --window:#0a1628; --surface:#0d1f3c; --raised:#12284a; --stage:#050c18;
+  --text:#f0f4ff; --soft:rgba(240,244,255,.74); --muted:#93a4c4;
+  --line:rgba(136,153,187,.18); --line-strong:rgba(136,153,187,.36);
+  --accent:#00b4d8; --accent-text:#48cae4; --on-accent:#06121f;
+  --tally:#ff4d5e;   /* on air: what the assistant is changing right now */
+  --cue:#06d6a0;     /* ready / done */
+  --mark:#ffd166;    /* comments and warnings */
+  --radius:4px; --radius-big:6px;
+  --display:"Bebas Neue", sans-serif; --display-size:64px; --display-track:.02em;
+}
+[data-dir="B"]{
+  --window:#15110e; --surface:#1d1814; --raised:#27201a; --stage:#0b0907;
+  --text:#f5ece0; --soft:rgba(245,236,224,.76); --muted:#b09c86;
+  --line:rgba(176,156,134,.18); --line-strong:rgba(176,156,134,.36);
+  --accent:#ff8a3d; --accent-text:#ffa766; --on-accent:#1a0d03;
+  --tally:#e5484d; --cue:#8fbf6a; --mark:#ffe14d;
+  --radius:2px; --radius-big:3px;
+  --display:"Space Mono", monospace; --display-size:44px; --display-track:-.02em;
+}
+[data-dir="C"]{
+  --window:#08203a; --surface:#0b2846; --raised:#103256; --stage:#051424;
+  --text:#eaf6ff; --soft:rgba(234,246,255,.76); --muted:#8fb3cf;
+  --line:rgba(120,190,235,.20); --line-strong:rgba(120,190,235,.40);
+  --accent:#5ee0ff; --accent-text:#8ce9ff; --on-accent:#03202e;
+  --tally:#ff7a59; --cue:#7ee2a8; --mark:#ffd166;
+  --radius:0px; --radius-big:0px;
+  --display:"Bebas Neue", sans-serif; --display-size:58px; --display-track:.06em;
+}
+*{box-sizing:border-box} html,body{margin:0;height:100%}
+body{background:var(--window);color:var(--text);font:400 13px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow:hidden}
+[data-dir="C"] body, body[data-dir="C"]{background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:32px 32px}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mono{font-family:"Space Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+kbd{font:11px "Space Mono",monospace;border:1px solid var(--line-strong);border-radius:3px;padding:0 4px;color:var(--muted)}
+
+/* ---- direction switcher (prototype only) ---- */
+.switcher{position:fixed;right:12px;bottom:12px;z-index:50;display:flex;gap:4px;background:var(--raised);border:1px solid var(--line-strong);border-radius:var(--radius-big);padding:4px}
+.switcher button{background:none;border:0;padding:6px 10px;border-radius:var(--radius);color:var(--muted)}
+.switcher button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent);font-weight:600}
+
+/* ---- shell ---- */
+.app{display:grid;grid-template-columns:56px 1fr;height:100vh}
+.rail{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 0;border-right:1px solid var(--line);background:var(--surface)}
+.rail .logo{width:28px;height:28px;margin-bottom:14px;display:grid;place-items:center;font:20px var(--display);color:var(--accent)}
+.rail button{width:38px;height:38px;border-radius:var(--radius-big);border:0;background:none;color:var(--muted);display:grid;place-items:center;position:relative}
+.rail button:hover{background:var(--raised);color:var(--text)}
+.rail button[aria-current="page"]{background:var(--raised);color:var(--accent-text);box-shadow:inset 2px 0 0 var(--accent)}
+.rail .spacer{flex:1}
+.rail .badge{position:absolute;top:2px;right:0;min-width:16px;height:16px;border-radius:8px;background:var(--cue);color:#04130c;font:700 10px/16px "Space Mono",monospace;padding:0 4px}
+svg.i{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.view{min-width:0;overflow:hidden}
+.view[hidden]{display:none}
+
+/* ---- home ---- */
+.home{display:grid;grid-template-rows:auto 1fr;height:100%;padding:24px 28px 20px;gap:18px}
+.home__head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px}
+.home__head h1{margin:0;font:400 var(--display-size)/0.95 var(--display);letter-spacing:var(--display-track)}
+.home__head .tc{color:var(--muted)}
+[data-dir="A"] .home__head h1::before{content:"";display:inline-block;width:12px;height:12px;border-radius:50%;background:var(--cue);margin-right:14px;vertical-align:middle;box-shadow:0 0 0 4px rgba(6,214,160,.18)}
+.home__body{display:grid;grid-template-columns:minmax(320px,420px) 1fr;gap:18px;min-height:0}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-big);min-height:0;display:flex;flex-direction:column}
+.tabs{display:flex;gap:4px;padding:6px;border-bottom:1px solid var(--line)}
+.tabs button{flex:1;border:0;background:none;padding:9px 8px;border-radius:var(--radius);color:var(--muted);font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px}
+.tabs button[aria-selected="true"]{background:var(--raised);color:var(--text);box-shadow:inset 0 -2px 0 var(--accent)}
+.tabpanel{padding:16px;display:flex;flex-direction:column;gap:14px;overflow:auto}
+.tabpanel[hidden]{display:none}
+label.f{display:flex;flex-direction:column;gap:6px;color:var(--muted);font-size:12px}
+textarea,input.t{background:var(--stage);border:1px solid var(--line-strong);border-radius:var(--radius);padding:10px 12px;resize:vertical;color:var(--text)}
+textarea{min-height:120px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.chip{border:1px solid var(--line-strong);background:none;border-radius:999px;padding:5px 10px;color:var(--soft);font-size:12px}
+[data-dir="C"] .chip,[data-dir="B"] .chip{border-radius:var(--radius)}
+.chip[aria-pressed="true"]{border-color:var(--accent);color:var(--accent-text)}
+.btn{border:0;border-radius:var(--radius);padding:9px 14px;font-weight:600;background:var(--raised);color:var(--text)}
+.btn--go{background:var(--accent);color:var(--on-accent)}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.drop{border:1.5px dashed var(--line-strong);border-radius:var(--radius-big);padding:22px;text-align:center;color:var(--soft)}
+.hint{color:var(--muted);font-size:12px}
+.err{color:var(--tally);font-size:12px}
+
+.right{display:flex;flex-direction:column;min-height:0}
+.right__head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;gap:10px}
+.right__head h2{margin:0;font:400 28px/1 var(--display);letter-spacing:var(--display-track)}
+[data-dir="B"] .right__head h2{font-size:20px}
+.search{display:flex;gap:6px;align-items:center;background:var(--stage);border:1px solid var(--line-strong);border-radius:var(--radius);padding:6px 10px;min-width:260px}
+.search input{border:0;background:none;outline:0;flex:1}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px;padding:4px 16px 16px;overflow:auto}
+.card{border:0;background:none;padding:0;text-align:left;display:flex;flex-direction:column;gap:6px}
+.thumb{position:relative;aspect-ratio:9/14;border-radius:var(--radius-big);overflow:hidden;border:1px solid var(--line)}
+.card:hover .thumb{border-color:var(--accent)}
+.card[aria-pressed="true"] .thumb{outline:2px solid var(--accent);outline-offset:2px}
+.thumb .dur{position:absolute;right:6px;bottom:6px;background:rgba(0,0,0,.7);padding:1px 6px;border-radius:3px;font:11px "Space Mono",monospace}
+.thumb .src{position:absolute;left:6px;top:6px;background:rgba(0,0,0,.6);padding:1px 6px;border-radius:3px;font-size:10px;letter-spacing:.04em;text-transform:uppercase}
+.card .t1{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .t2{color:var(--muted);font-size:12px}
+/* B: contact sheet — sprocket holes down both edges */
+[data-dir="B"] .grid{background:#0d0a08;margin:0 16px 16px;padding:14px 22px;gap:10px;border-radius:2px;position:relative}
+[data-dir="B"] .grid::before,[data-dir="B"] .grid::after{content:"";position:absolute;top:0;bottom:0;width:10px;background:radial-gradient(circle,#2a221b 2.5px,transparent 3px) 0 0/10px 14px repeat-y}
+[data-dir="B"] .grid::before{left:5px}[data-dir="B"] .grid::after{right:5px}
+[data-dir="B"] .card .t1::before{content:attr(data-frame) "  ";color:var(--accent-text);font-family:"Space Mono",monospace}
+/* C: storyboard panels with numbers */
+[data-dir="C"] .thumb::after{content:attr(data-panel);position:absolute;left:0;bottom:0;background:var(--accent);color:var(--on-accent);font:700 11px "Space Mono",monospace;padding:2px 6px}
+
+/* ---- editor ---- */
+.editor{display:grid;height:100%;grid-template-columns:320px 1fr 280px;grid-template-rows:44px 1fr 250px}
+.bar{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:0 14px;border-bottom:1px solid var(--line);background:var(--surface)}
+.bar .name{font-weight:600}
+.bar .sp{flex:1}
+.onair{display:inline-flex;align-items:center;gap:6px;font:700 11px "Space Mono",monospace;letter-spacing:.08em;color:var(--tally);border:1px solid var(--tally);padding:2px 8px;border-radius:var(--radius)}
+.onair::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--tally)}
+.chat{border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0;background:var(--surface)}
+.msgs{flex:1;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+.msg{padding:10px 12px;border-radius:var(--radius-big);background:var(--raised);max-width:92%}
+.msg--me{align-self:flex-end;background:var(--accent);color:var(--on-accent)}
+.step{font:12px "Space Mono",monospace;color:var(--muted);display:flex;gap:8px;align-items:center}
+.step.live{color:var(--tally)}
+.compose{border-top:1px solid var(--line);padding:10px;display:flex;flex-direction:column;gap:8px}
+.compose textarea{min-height:64px}
+.compose .row{justify-content:space-between}
+.sel{background:var(--stage);border:1px solid var(--line-strong);border-radius:var(--radius);padding:4px 8px;font-size:12px;color:var(--soft)}
+.stage{display:flex;flex-direction:column;min-width:0;background:var(--stage)}
+.frame-wrap{flex:1;display:grid;place-items:center;padding:16px;min-height:0;position:relative}
+.frame{height:100%;max-height:100%;aspect-ratio:9/16;background:linear-gradient(160deg,#16325c,#0a1628 60%,#00394a);border-radius:2px;position:relative;overflow:hidden;cursor:crosshair}
+.frame .title{position:absolute;left:8%;right:8%;top:38%;font:400 44px/0.95 "Bebas Neue",sans-serif;color:#fff}
+.frame .sub{position:absolute;left:8%;top:56%;color:#bfe9f5;font-size:13px}
+.frame .safe{position:absolute;inset:6% 6% 14% 6%;border:1px dashed rgba(255,255,255,.3);pointer-events:none}
+.frame .safe[hidden]{display:none}
+.frame .working{position:absolute;left:6%;right:6%;top:35%;height:22%;border:2px solid var(--tally);box-shadow:0 0 0 4px rgba(255,77,94,.15)}
+.pin{position:absolute;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50% 50% 50% 2px;background:var(--mark);color:#1b1500;font:700 11px/22px "Space Mono",monospace;text-align:center}
+[data-dir="B"] .pin{border-radius:0;background:none;color:var(--mark);font:600 22px/1 Caveat,cursive;width:auto;height:auto;margin:-12px 0 0 -6px}
+[data-dir="B"] .pin::before{content:"";position:absolute;left:-14px;top:-6px;width:44px;height:34px;border:2.5px solid var(--mark);border-radius:50%;transform:rotate(-8deg)}
+.transport{display:flex;align-items:center;gap:10px;padding:8px 14px;border-top:1px solid var(--line);background:var(--surface)}
+.transport .tc{font:700 15px "Space Mono",monospace}
+.inspector{border-left:1px solid var(--line);background:var(--surface);display:flex;flex-direction:column;min-height:0}
+.inspector .tabs button{font-size:12px;padding:7px 4px}
+.props{padding:14px;display:grid;grid-template-columns:auto 1fr;gap:10px 12px;align-items:center;overflow:auto}
+.props dt{color:var(--muted);font-size:12px}.props dd{margin:0}
+.swatches{display:flex;gap:6px}.swatches span{width:20px;height:20px;border-radius:var(--radius);border:1px solid var(--line-strong)}
+.comments{padding:12px;display:flex;flex-direction:column;gap:8px;overflow:auto}
+.comment{border:1px solid var(--line);border-radius:var(--radius-big);padding:10px;display:flex;flex-direction:column;gap:4px}
+.comment .meta{font:11px "Space Mono",monospace;color:var(--mark)}
+.timeline{grid-column:1/-1;border-top:1px solid var(--line);background:var(--surface);display:flex;flex-direction:column;min-height:0}
+.tl-tabs{display:flex;gap:4px;align-items:center;padding:4px 10px;border-bottom:1px solid var(--line)}
+.tl-tabs button{border:0;background:none;color:var(--muted);padding:6px 10px;border-radius:var(--radius);font-weight:600;font-size:12px}
+.tl-tabs button[aria-selected="true"]{color:var(--text);background:var(--raised)}
+.lanes{position:relative;flex:1;overflow:hidden;padding:6px 10px 10px 90px}
+.ruler{height:20px;position:relative;font:10px "Space Mono",monospace;color:var(--muted);border-bottom:1px solid var(--line)}
+.ruler span{position:absolute;top:3px}
+.lane{height:38px;position:relative;margin-top:6px}
+.lane .lbl{position:absolute;left:-80px;top:10px;font-size:11px;color:var(--muted);width:70px}
+.clip{position:absolute;top:0;bottom:0;border-radius:var(--radius);padding:4px 8px;font-size:11px;font-weight:600;overflow:hidden;white-space:nowrap;border:1px solid rgba(255,255,255,.08)}
+.clip--gfx{background:#1d4e89}.clip--vid{background:#17616b}.clip--aud{background:#3a3f6b}
+[data-dir="B"] .clip--gfx{background:#6b3d1e}[data-dir="B"] .clip--vid{background:#4a5a2c}[data-dir="B"] .clip--aud{background:#3d3328}
+.clip.live{box-shadow:inset 0 0 0 2px var(--tally)}
+.clip.live::after{content:"ON AIR";position:absolute;right:6px;top:4px;font:700 9px "Space Mono",monospace;color:var(--tally);letter-spacing:.1em}
+.wave{position:absolute;left:0;right:0;bottom:3px;height:16px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.35) 0 2px,transparent 2px 4px);mask:linear-gradient(transparent 0,#000 30%,#000 70%,transparent);opacity:.7}
+.ghost .clip{background:transparent;border:1px dashed var(--accent);color:var(--accent-text);font-weight:400}
+.ghost[hidden]{display:none}
+.playhead{position:absolute;top:6px;bottom:6px;width:2px;background:var(--accent);left:calc(90px + 34%)}
+.playhead::before{content:"";position:absolute;top:0;left:-5px;border:6px solid transparent;border-top-color:var(--accent)}
+.transcript{padding:12px 16px;overflow:auto;line-height:2;font-size:14px}
+.transcript[hidden]{display:none}
+.transcript .w{padding:2px 1px;border-radius:2px;cursor:pointer}
+.transcript .w:hover{background:var(--raised)}
+.transcript .w.cut{text-decoration:line-through;color:var(--muted);background:rgba(255,77,94,.12)}
+.transcript .gap{font:10px "Space Mono",monospace;color:var(--mark);border:1px dashed var(--mark);border-radius:3px;padding:0 4px;margin:0 3px}
+.lanes[hidden]{display:none}
+
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+@media (max-width:900px){.home__body{grid-template-columns:1fr}.editor{grid-template-columns:1fr;grid-template-rows:44px 1fr 220px}.chat,.inspector{display:none}}
+</style>
+</head>
+<body data-dir="A">
+<div class="app" id="app">
+  <nav class="rail" aria-label="Navigation">
+    <div class="logo" aria-hidden="true">RV</div>
+    <button title="Search projects or run a command (⌘K)" aria-label="Search"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
+    <button title="New video (⌘N)" aria-label="New video" data-go="home"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+    <button aria-current="page" title="Home" aria-label="Home" data-go="home"><svg class="i" viewBox="0 0 24 24"><path d="M4 11 12 4l8 7v9H4z"/></svg></button>
+    <button title="Editor" aria-label="Editor" data-go="editor"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 15h18M8 15v4"/></svg></button>
+    <button title="References" aria-label="References"><svg class="i" viewBox="0 0 24 24"><path d="M4 5h16v14H4zM10 9l5 3-5 3z"/></svg></button>
+    <button title="Brand kits" aria-label="Brand kits"><svg class="i" viewBox="0 0 24 24"><circle cx="8" cy="9" r="3"/><circle cx="16" cy="9" r="3"/><circle cx="12" cy="16" r="3"/></svg></button>
+    <div class="spacer"></div>
+    <button title="Jobs" aria-label="Jobs, 2 running"><svg class="i" viewBox="0 0 24 24"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 20h14"/></svg><span class="badge">2</span></button>
+    <button title="Settings (⌘,)" aria-label="Settings"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></svg></button>
+  </nav>
+
+  <!-- HOME -->
+  <section class="view" id="home">
+    <div class="home">
+      <header class="home__head">
+        <h1 id="homeTitle">What are we cutting?</h1>
+        <span class="tc mono" id="homeMeta">4 projects · last edit 18:42</span>
+      </header>
+      <div class="home__body">
+        <div class="panel">
+          <div class="tabs" role="tablist">
+            <button role="tab" aria-selected="false" data-tab="make">Make</button>
+            <button role="tab" aria-selected="true" data-tab="ref">Reference</button>
+            <button role="tab" aria-selected="false" data-tab="script">Script</button>
+          </div>
+          <div class="tabpanel" data-panel="make" hidden>
+            <label class="f">What should it be?<textarea placeholder="A 25-second launch video for rirote.com — five scenes, real screenshots, a closing card with the URL."></textarea></label>
+            <div class="row"><button class="chip" aria-pressed="true">Portrait 9:16</button><button class="chip">Landscape</button><button class="chip">Square</button></div>
+            <div class="row"><span class="hint">Brand kit</span><select class="sel"><option>Rirote Global</option><option>Samarth Crafts</option><option>None</option></select></div>
+            <button class="btn btn--go">Start the video</button>
+          </div>
+          <div class="tabpanel" data-panel="ref">
+            <div class="drop">Drop a reference video here<br><span class="hint">MP4, MOV or WebM · up to 10 minutes · studied, never reused</span></div>
+            <label class="f">Or paste a link
+              <div class="row"><input class="t" id="link" style="flex:1" placeholder="youtube.com/shorts/…  instagram.com/reel/…"><button class="btn" id="useLink">Study it</button></div>
+            </label>
+            <p class="err" id="linkErr" hidden></p>
+            <p class="hint">The app downloads it to your Mac, finds the shots, pacing and type, and turns that into a brief. Your video is built new from it.</p>
+          </div>
+          <div class="tabpanel" data-panel="script" hidden>
+            <label class="f">Your script<textarea style="min-height:200px" placeholder="Scene 1 — hook: “Your tickets are lying to you.”"></textarea></label>
+            <div class="row"><button class="chip" aria-pressed="true">Voiceover: Kokoro · Bella</button><button class="chip">No voice</button></div>
+            <button class="btn btn--go">Turn script into a video</button>
+          </div>
+        </div>
+        <div class="panel right">
+          <div class="right__head">
+            <h2>Pick a reference</h2>
+            <div class="row">
+              <div class="search"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input value="product launch shorts" aria-label="Search references"></div>
+              <button class="chip" aria-pressed="true">YouTube</button>
+              <button class="chip" title="Experimental: uses your browser's Instagram sign-in">Instagram · beta</button>
+            </div>
+          </div>
+          <div class="grid" id="gallery"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- EDITOR -->
+  <section class="view" id="editor" hidden>
+    <div class="editor">
+      <div class="bar">
+        <span class="name">rirote-launch</span><span class="hint mono">1080×1920 · 25.0 s</span>
+        <span class="onair" id="onair">ON AIR · scene 2</span>
+        <span class="sp"></span>
+        <button class="btn">Undo AI turn</button>
+        <button class="btn btn--go">Export</button>
+      </div>
+      <aside class="chat">
+        <div class="msgs">
+          <div class="msg msg--me">Make scene 2 punchier — shorter title, slam in on the beat.</div>
+          <div class="step">✓ read index.html</div>
+          <div class="step">✓ beats: 112 BPM, beat at 4.29 s</div>
+          <div class="step live">● editing scene-2.html</div>
+          <div class="msg">Cutting the title to “Ship faster.” and moving its entrance to the 4.29 s beat.</div>
+        </div>
+        <div class="compose">
+          <textarea placeholder="Ask for an edit — it sees the playhead and selection"></textarea>
+          <div class="row"><span class="row"><select class="sel"><option>Sonnet</option><option>Opus</option><option>Haiku</option></select><select class="sel"><option>Effort: medium</option></select></span><button class="btn btn--go">Send <kbd>↵</kbd></button></div>
+        </div>
+      </aside>
+      <main class="stage">
+        <div class="frame-wrap">
+          <div class="frame" id="frame" title="Click to leave a comment">
+            <div class="safe" id="safe"></div>
+            <div class="working"></div>
+            <div class="title">Ship faster.</div>
+            <div class="sub">rirote.com</div>
+            <span class="pin" style="left:72%;top:20%">1</span>
+          </div>
+        </div>
+        <div class="transport">
+          <button class="btn" aria-label="Play">▶</button>
+          <span class="tc">00:08:12</span><span class="hint mono">/ 00:25:00</span>
+          <span class="sp" style="flex:1"></span>
+          <button class="chip" id="safeBtn" aria-pressed="true">Safe zone</button>
+          <select class="sel"><option>Preview: full</option><option>Half</option></select>
+          <select class="sel"><option>1×</option><option>0.5×</option><option>2×</option></select>
+        </div>
+      </main>
+      <aside class="inspector">
+        <div class="tabs" role="tablist">
+          <button role="tab" aria-selected="true" data-itab="inspect">Inspect</button>
+          <button role="tab" aria-selected="false" data-itab="media">Media</button>
+          <button role="tab" aria-selected="false" data-itab="brand">Brand</button>
+          <button role="tab" aria-selected="false" data-itab="notes">Notes <span class="mono">1</span></button>
+        </div>
+        <dl class="props" data-ipanel="inspect">
+          <dt>Clip</dt><dd class="mono">#scene-2</dd>
+          <dt>Start</dt><dd class="mono">00:04:07</dd>
+          <dt>Length</dt><dd class="mono">5.20 s</dd>
+          <dt>Speed</dt><dd><select class="sel"><option>1×</option><option>1.25×</option></select></dd>
+          <dt>Font</dt><dd>Bebas Neue</dd>
+          <dt>Colours</dt><dd class="swatches"><span style="background:#0a1628"></span><span style="background:#00b4d8"></span><span style="background:#f0f4ff"></span></dd>
+          <dt>Transition</dt><dd><button class="chip">Whip pan ▾</button></dd>
+          <dt>Look</dt><dd><button class="chip">Cool clean ▾</button></dd>
+        </dl>
+        <div class="comments" data-ipanel="notes" hidden>
+          <div class="comment"><span class="meta">#1 · 00:08:12</span>Logo is too close to the top edge.<div class="row"><button class="btn btn--go">Fix with AI</button><button class="btn">Resolve</button></div></div>
+        </div>
+      </aside>
+      <section class="timeline">
+        <div class="tl-tabs" role="tablist">
+          <button role="tab" aria-selected="true" data-ttab="lanes">Timeline</button>
+          <button role="tab" aria-selected="false" data-ttab="words">Transcript</button>
+          <span style="flex:1"></span>
+          <label class="hint"><input type="checkbox" id="ghostToggle" checked> Reference ghost track</label>
+        </div>
+        <div class="lanes" data-tpanel="lanes">
+          <div class="ruler"><span style="left:0">0s</span><span style="left:20%">5s</span><span style="left:40%">10s</span><span style="left:60%">15s</span><span style="left:80%">20s</span></div>
+          <div class="lane ghost" id="ghost"><span class="lbl">Reference</span>
+            <div class="clip" style="left:0;width:12%">hook 3.0s</div><div class="clip" style="left:12%;width:22%">product 5.4s</div><div class="clip" style="left:34%;width:30%">proof 7.6s</div><div class="clip" style="left:64%;width:36%">CTA 9.0s</div></div>
+          <div class="lane"><span class="lbl">Graphics</span>
+            <div class="clip clip--gfx" style="left:0;width:16%">scene-1 hook</div><div class="clip clip--gfx live" style="left:16%;width:21%">scene-2 title</div><div class="clip clip--gfx" style="left:37%;width:30%">scene-3 proof</div><div class="clip clip--gfx" style="left:67%;width:33%">scene-4 CTA</div></div>
+          <div class="lane"><span class="lbl">Footage</span><div class="clip clip--vid" style="left:16%;width:51%">screen-capture.mp4</div></div>
+          <div class="lane"><span class="lbl">Voice</span><div class="clip clip--aud" style="left:2%;width:88%">voiceover.wav<span class="wave"></span></div></div>
+          <div class="playhead"></div>
+        </div>
+        <div class="transcript" data-tpanel="words" hidden id="words"></div>
+      </section>
+    </div>
+  </section>
+</div>
+
+<div class="switcher" role="group" aria-label="Art direction">
+  <button aria-pressed="true" data-pick="A">A · Control Room</button>
+  <button aria-pressed="false" data-pick="B">B · Cutting Room</button>
+  <button aria-pressed="false" data-pick="C">C · Storyboard</button>
+</div>
+
+<script>
+const titles = {A:"What are we cutting?", B:"On the bench today", C:"Board a new film"};
+const gallery = [
+  ["Launch reel, 6 scenes", "Studio Kinetik · 212K views", "0:31", "youtube", "#1d3557,#00b4d8"],
+  ["SaaS demo in 30 seconds", "Motionframe · 48K views", "0:29", "youtube", "#2b2d42,#ef476f"],
+  ["Kinetic type promo", "Typeplay · 1.1M views", "0:18", "youtube", "#0b090a,#ffd166"],
+  ["Founder talking head + b-roll", "Build in public · 9.4K views", "0:58", "youtube", "#283618,#dda15e"],
+  ["App walkthrough, phone mockup", "Pixel Lane · 77K views", "0:41", "youtube", "#14213d,#fca311"],
+  ["Diwali product drop", "Craft & Wick · 3.2K views", "0:22", "youtube", "#3d0c02,#ff7b00"],
+];
+const g = document.getElementById("gallery");
+g.innerHTML = gallery.map((x,i)=>`<button class="card" aria-pressed="${i===0}"><div class="thumb" data-panel="P${i+1}" style="background:linear-gradient(160deg,${x[4]})"><span class="src">${x[3]}</span><span class="dur">${x[2]}</span></div><span class="t1" data-frame="${String(i*8+12).padStart(3,"0")}">${x[0]}</span><span class="t2">${x[1]}</span></button>`).join("");
+g.addEventListener("click",e=>{const c=e.target.closest(".card");if(!c)return;g.querySelectorAll(".card").forEach(x=>x.setAttribute("aria-pressed",x===c));});
+
+function setDir(d){document.body.dataset.dir=d;document.querySelectorAll(".switcher button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.pick===d));document.getElementById("homeTitle").textContent=titles[d];document.getElementById("ghostToggle").checked=d!=="B";document.getElementById("ghost").hidden=d==="B";}
+document.querySelectorAll(".switcher button").forEach(b=>b.onclick=()=>setDir(b.dataset.pick));
+function go(v){document.getElementById("home").hidden=v!=="home";document.getElementById("editor").hidden=v!=="editor";document.querySelectorAll(".rail [data-go]").forEach(b=>{if(b.getAttribute("aria-label")==="New video")return;b.dataset.go===v?b.setAttribute("aria-current","page"):b.removeAttribute("aria-current");});}
+document.querySelectorAll(".rail [data-go]").forEach(b=>b.onclick=()=>go(b.dataset.go));
+function tabs(attr,panel){document.querySelectorAll(`[data-${attr}]`).forEach(t=>t.onclick=()=>{document.querySelectorAll(`[data-${attr}]`).forEach(x=>x.setAttribute("aria-selected",x===t));document.querySelectorAll(`[data-${panel}]`).forEach(p=>p.hidden=p.dataset[panel]!==t.dataset[attr]);});}
+tabs("tab","panel");tabs("itab","ipanel");tabs("ttab","tpanel");
+document.getElementById("safeBtn").onclick=e=>{const s=document.getElementById("safe");s.hidden=!s.hidden;e.target.setAttribute("aria-pressed",!s.hidden);};
+document.getElementById("ghostToggle").onchange=e=>document.getElementById("ghost").hidden=!e.target.checked;
+document.getElementById("useLink").onclick=()=>{const v=document.getElementById("link").value.trim();const err=document.getElementById("linkErr");if(!/^https?:\/\//.test(v)){err.hidden=false;err.textContent="That isn't a link. Paste the full address, starting with https://";return;}err.hidden=true;go("editor");};
+document.getElementById("frame").onclick=e=>{if(e.target.classList.contains("pin"))return;const r=e.currentTarget.getBoundingClientRect();const p=document.createElement("span");p.className="pin";const n=e.currentTarget.querySelectorAll(".pin").length+1;p.textContent=n;p.style.left=((e.clientX-r.left)/r.width*100)+"%";p.style.top=((e.clientY-r.top)/r.height*100)+"%";e.currentTarget.appendChild(p);};
+const words="So most teams [0.8s] lose a day every week chasing tickets. um, like, What if every ticket knew its owner, its deadline and its next step?".split(" ");
+document.getElementById("words").innerHTML=words.map(w=>w.startsWith("[")?`<span class="gap" title="Pause — click to shorten">${w.slice(1,-1)}</span>`:`<span class="w${/^(um,|like,)$/.test(w)?" cut":""}">${w}</span>`).join(" ");
+document.getElementById("words").onclick=e=>{if(e.target.classList.contains("w"))e.target.classList.toggle("cut");};
+</script>
+</body>
+</html>

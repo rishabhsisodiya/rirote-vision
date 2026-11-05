@@ -1,19 +1,38 @@
-/* Rirote brand colours (rirote-global/assets/site.css) arranged for an editor.
-   The app is dark only, as video editors are: the picture is judged against it. */
+/* ==============================================================
+   RIROTE VISION · "CONTROL ROOM" DESIGN SYSTEM (chosen 2026-11-04)
+   Idea: a broadcast gallery. The picture is the programme monitor; what the
+   assistant is changing right now is "on air", lit by a tally light.
+   Prototype of all three directions: prototype/directions.html.
+
+   Colour — Rirote navy for the room, cyan for what you can act on:
+     window/surface/raised  the desk, from back to front
+     stage                  behind the picture, darkest, so the picture is judged fairly
+     accent                 actions, selection, the playhead
+     tally                  ON AIR: the clip or element the assistant is editing
+     cue                    ready and done (setup rows, finished jobs)
+     mark                   comments and warnings, grease-pencil yellow
+   Type   — system font for UI; Space Mono for every time, size and count so
+            figures line up; Bebas Neue only for screen headings and the wordmark.
+   Shape  — 4px controls, 6px panes: hardware, not bubbles.
+   Motion — only on: the tally pulse, panel open/close, drag feedback. Off
+            under reduced motion (base.css).
+   The app is dark only, as video editors are.
+   ============================================================== */
 :root {
   color-scheme: dark;
 
   --window: #0a1628;
   --surface: #0d1f3c;
-  --surface-raised: #0f2340;
-  --stage: #060e1b;
+  --surface-raised: #12284a;
+  --stage: #050c18;
 
   --text: #f0f4ff;
   --text-soft: rgba(240, 244, 255, 0.74);
-  --muted: #8899bb;
+  /* 4.5:1 on --surface. */
+  --muted: #93a4c4;
 
   --line: rgba(136, 153, 187, 0.18);
-  --line-strong: rgba(136, 153, 187, 0.34);
+  --line-strong: rgba(136, 153, 187, 0.36);
 
   --accent: #00b4d8;
   --accent-hover: #48cae4;
@@ -21,8 +40,14 @@
   --accent-soft: rgba(0, 180, 216, 0.12);
   --on-accent: #06121f;
 
-  --ok: #06d6a0;
-  --warning: #ffd166;
+  --tally: #ff4d5e;
+  --tally-soft: rgba(255, 77, 94, 0.15);
+  --cue: #06d6a0;
+  --mark: #ffd166;
+  --on-mark: #1b1500;
+
+  --ok: var(--cue);
+  --warning: var(--mark);
   --danger: #ff8c8c;
   --danger-soft: rgba(255, 140, 140, 0.1);
 
@@ -33,6 +58,8 @@
   --text-small: 11px;
   --text-body: 13px;
   --text-title: 15px;
+  --text-heading: 28px;
+  --text-hero: 64px;
 
   --space-1: 4px;
   --space-2: 8px;
@@ -41,10 +68,11 @@
   --space-5: 24px;
   --space-6: 40px;
 
-  --radius-control: 6px;
-  --radius-pane: 10px;
+  --radius-control: 4px;
+  --radius-pane: 6px;
   --control-height: 28px;
   --titlebar-height: 44px;
   /* Room for the window's close, minimise and zoom buttons. */
   --traffic-lights: 78px;
+  --rail-width: 56px;
 }

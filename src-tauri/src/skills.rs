@@ -111,3 +111,61 @@ mod tests {
         assert_eq!(missing(dir.path()).len(), CORE.len());
     }
 }
+
+/// A skill the assistant can be pointed at from the chat.
+#[derive(Debug, Clone, serde::Serialize, PartialEq)]
+pub struct SkillInfo {
+    pub name: String,
+    pub description: String,
+}
+
+/// The skill's `name` and the start of its `description`, from SKILL.md's front matter.
+fn read_front_matter(text: &str) -> Option<(String, String)> {
+    let body = text.strip_prefix("---")?;
+    let end = body.find("\n---")?;
+    let mut name = None;
+    let mut description = String::new();
+    for line in body[..end].lines() {
+        if let Some(value) = line.strip_prefix("name:") {
+            name = Some(value.trim().trim_matches('"').to_owned());
+        } else if let Some(value) = line.strip_prefix("description:") {
+            description = value.trim().trim_matches(['"', '\'', '>', '|']).trim().to_owned();
+        }
+    }
+    let description: String = description.chars().take(160).collect();
+    Some((name?, description))
+}
+
+/// The installed skills about video: HyperFrames' own and any that mention it.
+pub fn list(folder: &Path) -> Vec<SkillInfo> {
+    let Ok(entries) = std::fs::read_dir(folder) else { return Vec::new() };
+    let mut found: Vec<SkillInfo> = entries
+        .filter_map(Result::ok)
+        .filter_map(|entry| read_front_matter(&std::fs::read_to_string(entry.path().join("SKILL.md")).ok()?))
+        .filter(|(name, description)| {
+            CORE.contains(&name.as_str()) || format!("{name} {description}").to_lowercase().contains("hyperframes")
+        })
+        .map(|(name, description)| SkillInfo { name, description })
+        .collect();
+    found.sort_by(|a, b| a.name.cmp(&b.name));
+    found
+}
+
+#[cfg(test)]
+mod list_tests {
+    use super::*;
+
+    #[test]
+    fn only_video_skills_are_listed_with_their_description() {
+        let dir = tempfile::tempdir().unwrap();
+        let write = |folder: &str, text: &str| {
+            std::fs::create_dir_all(dir.path().join(folder)).unwrap();
+            std::fs::write(dir.path().join(folder).join("SKILL.md"), text).unwrap();
+        };
+        write("captions", "---\nname: embedded-captions\ndescription: \"Add captions to a HyperFrames video\"\n---\nbody");
+        write("pdf", "---\nname: pdf\ndescription: Read PDFs\n---\n");
+        write("broken", "no front matter");
+        let found = list(dir.path());
+        assert_eq!(found, vec![SkillInfo { name: "embedded-captions".into(), description: "Add captions to a HyperFrames video".into() }]);
+    }
+}

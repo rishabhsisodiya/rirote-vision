@@ -13,7 +13,7 @@ use tokio::process::Command;
 use crate::error::{AppError, AppResult};
 use crate::{shell_env, voice};
 
-pub const PINNED_VERSION: &str = "0.8.146";
+pub const PINNED_VERSION: &str = "0.9.9";
 
 const INSTALL_TIMEOUT: Duration = Duration::from_secs(600);
 const NODE_HINT: &str = "Install Node.js 22 or newer, then check the setup again.";
@@ -70,41 +70,6 @@ pub async fn install(data_dir: &Path) -> AppResult<()> {
         ));
     }
     Ok(())
-}
-
-/// How far a sound may be from the picture's clock, during preview, before
-/// the engine's runtime jumps it back into place: the engine's value, and
-/// the app's.
-///
-/// The engine is written for Chromium, where a jump lands exactly. This app's
-/// window is WebKit, where it lands a little off, so with the engine's 40 ms
-/// the runtime jumps again and again, about seven times a second, and speech
-/// breaks up. A looser tolerance lets it settle. Only the copy of the runtime
-/// that the preview server serves is changed; the copy that export uses is
-/// verified by checksum and is left alone, so exports are unaffected.
-const SYNC_TOLERANCE: (&str, &str) = ("vl=.5,Xt=.04,ap=1/16", "vl=.5,Xt=.15,ap=1/16");
-/// The runtime files export depends on. They must stay byte-for-byte.
-const EXPORT_RUNTIMES: [&str; 2] = ["hyperframe.runtime.iife.js", "hyperframe-runtime.js"];
-
-/// Applies the preview tolerance to the installed engine. Returns how many
-/// files were changed: none when it is already applied, or when this engine
-/// version no longer has the setting in that form.
-pub fn tune_preview(data_dir: &Path) -> std::io::Result<usize> {
-    let dist = package_dir(data_dir).join("dist");
-    let mut changed = 0;
-    for entry in std::fs::read_dir(&dist)?.filter_map(Result::ok) {
-        let path = entry.path();
-        let name = entry.file_name().to_string_lossy().into_owned();
-        if !name.ends_with(".js") || EXPORT_RUNTIMES.contains(&name.as_str()) {
-            continue;
-        }
-        let Ok(text) = std::fs::read_to_string(&path) else { continue };
-        if text.contains(SYNC_TOLERANCE.0) {
-            std::fs::write(&path, text.replace(SYNC_TOLERANCE.0, SYNC_TOLERANCE.1))?;
-            changed += 1;
-        }
-    }
-    Ok(changed)
 }
 
 /// An engine command ready to run in `cwd`. The engine's usage reporting and
@@ -178,26 +143,6 @@ mod tests {
     #[test]
     fn no_json_is_none() {
         assert!(parse_json::<Value>(b"nothing here").is_none());
-    }
-
-    #[test]
-    fn the_preview_tolerance_is_applied_once_and_never_to_the_export_runtime() {
-        let dir = tempfile::tempdir().unwrap();
-        let dist = package_dir(dir.path()).join("dist");
-        std::fs::create_dir_all(&dist).unwrap();
-        let runtime = format!("var a=1,{},DE=.03;", SYNC_TOLERANCE.0);
-        for name in ["chunk-ABC.js", "hyperframe.runtime.iife.js", "hyperframe-runtime.js", "notes.md"] {
-            std::fs::write(dist.join(name), &runtime).unwrap();
-        }
-        std::fs::write(dist.join("other.js"), "nothing to tune").unwrap();
-
-        assert_eq!(tune_preview(dir.path()).unwrap(), 1);
-        let read = |name: &str| std::fs::read_to_string(dist.join(name)).unwrap();
-        assert!(read("chunk-ABC.js").contains(SYNC_TOLERANCE.1));
-        for untouched in ["hyperframe.runtime.iife.js", "hyperframe-runtime.js", "notes.md"] {
-            assert_eq!(read(untouched), runtime, "{untouched}");
-        }
-        assert_eq!(tune_preview(dir.path()).unwrap(), 0, "a second pass changes nothing");
     }
 
     #[test]

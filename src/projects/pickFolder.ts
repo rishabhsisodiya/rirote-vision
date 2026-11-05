@@ -24,3 +24,13 @@ export async function pickFiles(title: string): Promise<string[]> {
   return Array.isArray(chosen) ? chosen : [chosen];
 }
 
+
+/** Asks for one video. Resolves to null when the person cancels. */
+export async function pickVideo(title: string): Promise<string | null> {
+  const chosen = await open({
+    multiple: false,
+    title,
+    filters: [{ name: "Video", extensions: ["mp4", "mov", "webm", "mkv", "m4v"] }],
+  });
+  return typeof chosen === "string" ? chosen : null;
+}

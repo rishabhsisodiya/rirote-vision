@@ -116,18 +116,6 @@ impl PreviewManager {
             stop(running).await;
         }
 
-        // Best effort: without it the preview still runs, only less smoothly.
-        // RIROTE_VISION_NO_TUNE leaves the engine as installed, for comparing.
-        let tuned = if std::env::var_os("RIROTE_VISION_NO_TUNE").is_some() {
-            Ok(0)
-        } else {
-            hyperframes::tune_preview(&self.data_dir)
-        };
-        match tuned {
-            Ok(0) => {}
-            Ok(files) => log::write(&self.data_dir, "preview", &format!("sync tolerance applied to {files} engine file(s)")),
-            Err(error) => log::write(&self.data_dir, "preview", &format!("sync tolerance not applied: {error}")),
-        }
         let port = free_port().await?;
         let mut child = self.spawn(project_dir, port)?;
         let session = match self.wait_until_ready(&mut child, project_dir, port, lease).await {

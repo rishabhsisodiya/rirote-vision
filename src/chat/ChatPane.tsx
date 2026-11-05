@@ -10,6 +10,7 @@ import { Spinner } from "../ui/Spinner";
 import { inlineRuns, toolVerb } from "./chatState";
 import { trustLabel } from "./trust";
 import { TrustChooser } from "./TrustChooser";
+import { ComposerTools } from "./ComposerTools";
 import type { ChatControls } from "./useChat";
 
 const SUGGESTIONS = [
@@ -32,6 +33,8 @@ export function ChatPane({ chat, context, selectedName }: ChatPaneProps) {
   const [draft, setDraft] = useState("");
   /** The level chooser is open to change a level already chosen. */
   const [changing, setChanging] = useState(false);
+  /** Requests typed while a turn runs; each goes when the one before ends. */
+  const [queued, setQueued] = useState<string[]>([]);
   const list = useRef<HTMLDivElement>(null);
   const box = useRef<HTMLTextAreaElement>(null);
 
@@ -51,10 +54,22 @@ export function ChatPane({ chat, context, selectedName }: ChatPaneProps) {
 
   const submit = () => {
     const prompt = draft.trim();
-    if (!prompt || state.busy || choosing) return;
+    if (!prompt || choosing) return;
     setDraft("");
-    void chat.send(prompt, context);
+    if (state.busy || queued.length) setQueued((before) => [...before, prompt]);
+    else void chat.send(prompt, context);
   };
+
+  // The next queued request goes as soon as the assistant is free.
+  const { send } = chat;
+  const latestContext = useRef(context);
+  latestContext.current = context;
+  useEffect(() => {
+    if (state.busy || !state.loaded || queued.length === 0 || state.approvals.length) return;
+    const [next, ...rest] = queued;
+    setQueued(rest);
+    void send(next!, latestContext.current);
+  }, [state.busy, state.loaded, state.approvals.length, queued, send]);
 
   const onKey = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
@@ -63,7 +78,7 @@ export function ChatPane({ chat, context, selectedName }: ChatPaneProps) {
     }
   };
 
-  // A project with no level chosen asks for one before anything is sent.
+  // The level is shown in the header; clicking it opens the chooser.
   const choosing = state.loaded && (state.trust === null || changing);
   const empty = state.loaded && state.messages.length === 0 && !state.busy;
 
@@ -80,16 +95,6 @@ export function ChatPane({ chat, context, selectedName }: ChatPaneProps) {
             onClick={() => setChanging(true)}
           >
             {trustLabel(state.trust)}
-          </Button>
-        ) : null}
-        {state.rules > 0 ? (
-          <Button
-            variant="ghost"
-            disabled={state.busy}
-            title="Withdraw every “always allow” given in this project"
-            onClick={() => void chat.reset("permissions")}
-          >
-            Forget {state.rules} {state.rules === 1 ? "permission" : "permissions"}
           </Button>
         ) : null}
         <IconButton
@@ -153,6 +158,19 @@ export function ChatPane({ chat, context, selectedName }: ChatPaneProps) {
         ) : null}
       </div>
 
+      {queued.length ? (
+        <ul className="queued" aria-label="Waiting to be sent">
+          {queued.map((item, index) => (
+            <li key={index} className="queued__item">
+              <span className="queued__label">Next</span>
+              <span className="queued__text" title={item}>
+                {item}
+              </span>
+              <IconButton icon="close" label="Do not send this" onClick={() => setQueued((before) => before.filter((_, at) => at !== index))} />
+            </li>
+          ))}
+        </ul>
+      ) : null}
       <form
         className="composer"
         onSubmit={(event) => {
@@ -173,18 +191,25 @@ export function ChatPane({ chat, context, selectedName }: ChatPaneProps) {
             onChange={(event) => setDraft(event.target.value)}
             onKeyDown={onKey}
           />
-          {state.busy ? (
+          {state.busy && !draft.trim() ? (
             <IconButton className="composer__action" icon="stop" label="Stop the assistant" onClick={chat.stop} />
           ) : (
             <IconButton
               className="composer__action composer__action--send"
               icon="send"
-              label="Send (Return)"
+              label={state.busy ? "Send when this turn ends (Return)" : "Send (Return)"}
               disabled={!draft.trim() || choosing}
               onClick={submit}
             />
           )}
         </div>
+        <ComposerTools
+          disabled={choosing}
+          onSkill={(name) => {
+            setDraft((before) => `Use the ${name} skill. ${before}`.trimEnd() + (before ? "" : " "));
+            box.current?.focus();
+          }}
+        />
         <p id="composer-context" className="composer__context">
           {context.playhead === null ? "Preview not ready" : `Playhead ${formatDuration(context.playhead)}`}
           {selectedName ? ` · Selected ${selectedName}` : ""}
@@ -197,16 +222,28 @@ export function ChatPane({ chat, context, selectedName }: ChatPaneProps) {
 function Message({ message, busy }: { message: ChatMessage; busy: boolean }) {
   if (message.role === "tool") {
     const waiting = message.ok === undefined;
+    const verb = toolVerb(message.tool);
+    const failed = message.ok === false ? " (did not finish)" : "";
     return (
       <p className={`tool-row ${message.ok === false ? "tool-row--failed" : ""}`}>
         {waiting && busy ? <Spinner /> : <Icon name={message.ok === false ? "missing" : "check"} size={13} />}
-        <span className="tool-row__verb">
-          {toolVerb(message.tool)}
-          {message.ok === false ? " (did not finish)" : ""}
-        </span>
-        <span className="tool-row__detail" title={message.text}>
-          {message.text}
-        </span>
+        {verb ? (
+          <>
+            <span className="tool-row__verb">
+              {verb}
+              {failed}
+            </span>
+            <span className="tool-row__detail" title={message.text}>
+              {message.text}
+            </span>
+          </>
+        ) : (
+          // A step described in its own words, like "Checked the reel for errors".
+          <span className="tool-row__step">
+            {message.text || "Working in the project"}
+            {failed}
+          </span>
+        )}
       </p>
     );
   }
@@ -239,7 +276,7 @@ function Approval({ request, onAnswer }: ApprovalProps) {
     <div className="approval" role="group" aria-label="The assistant is asking for permission">
       <p className="approval__title">
         <Icon name="alert" />
-        Allow {toolVerb(request.tool) === "Ran" ? "this command" : `${request.tool}`}?
+        Allow {request.tool === "Bash" ? "this command" : request.tool}?
       </p>
       <pre className="approval__detail">{request.detail || request.tool}</pre>
       <div className="approval__actions">

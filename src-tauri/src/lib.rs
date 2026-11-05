@@ -4,22 +4,34 @@
 //! such action is one of the commands below.
 
 mod agent;
+mod brandkit;
+mod catalog;
+mod comments;
 mod doctor;
 mod error;
+mod history;
 mod hyperframes;
 mod ids;
 mod jobs;
 mod log;
+mod looks;
 mod media;
+mod media_cache;
 mod menu;
 mod music;
+mod openverse;
+mod posters;
 mod preview;
 mod project;
 mod recents;
+mod reference;
 mod render;
+mod settings;
 mod shell_env;
 mod skills;
+mod store;
 mod timeline;
+mod transcript;
 mod voice;
 
 #[cfg(test)]
@@ -40,12 +52,18 @@ use media::{MediaItem, MediaLibrary};
 use preview::{PreviewEvent, PreviewManager, PreviewSession};
 use project::{ProjectInfo, ProjectSummary, Resolution};
 use recents::{RecentProject, RecentStore};
+use settings::{Settings, SettingsStore};
 use timeline::{EditOp, TimelineService, TimelineState};
 
 struct AppState {
     /// `~/Library/Application Support/com.riroteglobal.vision`
     data_dir: PathBuf,
     recents: RecentStore,
+    settings: SettingsStore,
+    posters: posters::Posters,
+    brands: brandkit::BrandKits,
+    comments: comments::Comments,
+    references: Arc<reference::ReferenceService>,
     /// One engine install at a time.
     install: tokio::sync::Mutex<()>,
     preview: PreviewManager,
@@ -82,6 +100,12 @@ async fn voice_install(state: State<'_, AppState>) -> AppResult<doctor::Report> 
     Ok(doctor::run(&state.data_dir).await)
 }
 
+/// A short spoken sample of a voice, made once; returns the file to play.
+#[tauri::command]
+async fn voice_sample(state: State<'_, AppState>, voice: String) -> AppResult<String> {
+    Ok(voice::sample(&state.data_dir, &voice).await?.to_string_lossy().into_owned())
+}
+
 /// Installs HyperFrames' skills for Claude Code, then reports the setup again.
 #[tauri::command]
 async fn skills_install(state: State<'_, AppState>) -> AppResult<doctor::Report> {
@@ -92,9 +116,237 @@ async fn skills_install(state: State<'_, AppState>) -> AppResult<doctor::Report>
     Ok(doctor::run(&state.data_dir).await)
 }
 
+/// Installs or updates yt-dlp, then reports the setup again.
+#[tauri::command]
+async fn ytdlp_install(state: State<'_, AppState>) -> AppResult<doctor::Report> {
+    let _guard = state.install.lock().await;
+    reference::ytdlp::install(&state.data_dir).await?;
+    Ok(doctor::run(&state.data_dir).await)
+}
+
+#[tauri::command]
+fn reference_list(state: State<'_, AppState>) -> Vec<reference::model::Reference> {
+    state.references.list()
+}
+
+#[tauri::command]
+fn reference_get(state: State<'_, AppState>, id: String) -> AppResult<reference::ReferenceDetail> {
+    state.references.get(&id)
+}
+
+#[tauri::command]
+async fn reference_import(
+    state: State<'_, AppState>,
+    link: Option<String>,
+    file: Option<String>,
+) -> AppResult<reference::model::Reference> {
+    let settings = state.settings.get();
+    state.references.import(link, file, &settings).await
+}
+
+#[tauri::command]
+fn reference_retry(state: State<'_, AppState>, id: String) -> AppResult<reference::model::Reference> {
+    state.references.retry(&id)
+}
+
+#[tauri::command]
+fn reference_stop(state: State<'_, AppState>, id: String) {
+    state.references.stop(&id);
+}
+
+#[tauri::command]
+fn reference_delete(state: State<'_, AppState>, id: String) -> AppResult<()> {
+    state.references.delete(&id)
+}
+
+#[tauri::command]
+async fn reference_search(
+    state: State<'_, AppState>,
+    query: String,
+    source: String,
+) -> AppResult<Vec<reference::model::Found>> {
+    let settings = state.settings.get();
+    state.references.search(&query, &source, &settings).await
+}
+
+#[tauri::command]
+fn reference_brief(state: State<'_, AppState>, id: String, request: String, voice: Option<String>) -> AppResult<String> {
+    let voice = voice.unwrap_or_default();
+    state.references.brief(&id, &request, reference::Narration::from_choice(&voice))
+}
+
 #[tauri::command]
 fn projects_recent(state: State<'_, AppState>) -> Vec<RecentProject> {
     state.recents.list()
+}
+
+#[tauri::command]
+async fn project_poster(state: State<'_, AppState>, path: String) -> AppResult<String> {
+    state.posters.get(&state.data_dir, Path::new(&path)).await
+}
+
+#[tauri::command]
+fn projects_folder(state: State<'_, AppState>) -> AppResult<String> {
+    Ok(state.settings.projects_folder()?.to_string_lossy().into_owned())
+}
+
+#[tauri::command]
+async fn media_peaks(state: State<'_, AppState>, path: String, src: String) -> AppResult<media_cache::Peaks> {
+    media_cache::peaks(&state.data_dir, Path::new(&path), &src).await
+}
+
+#[tauri::command]
+async fn media_stills(state: State<'_, AppState>, path: String, src: String) -> AppResult<Vec<media_cache::Still>> {
+    media_cache::stills(&state.data_dir, Path::new(&path), &src).await
+}
+
+#[tauri::command]
+async fn catalog_list(state: State<'_, AppState>, shelf: String) -> AppResult<Vec<catalog::Item>> {
+    catalog::list(&state.data_dir, &shelf).await
+}
+
+#[tauri::command]
+async fn catalog_add(state: State<'_, AppState>, path: String, name: String) -> AppResult<catalog::Installed> {
+    catalog::add(&state.data_dir, Path::new(&path), &name).await
+}
+
+#[tauri::command]
+fn transcript_read(path: String, src: String) -> AppResult<Option<transcript::Transcript>> {
+    transcript::read(Path::new(&path), &src)
+}
+
+#[tauri::command]
+async fn media_silences(path: String, src: String, noise_db: f64, min_seconds: f64) -> AppResult<Vec<(f64, f64)>> {
+    transcript::silences(Path::new(&path), &src, noise_db, min_seconds).await
+}
+
+#[tauri::command]
+async fn timeline_cut(
+    state: State<'_, AppState>,
+    path: String,
+    clip: String,
+    ranges: Vec<(f64, f64)>,
+) -> AppResult<TimelineState> {
+    state.timeline.cut(&state.data_dir, Path::new(&path), &clip, &ranges).await
+}
+
+#[tauri::command]
+async fn looks_list(state: State<'_, AppState>) -> AppResult<Vec<looks::Look>> {
+    looks::list(&state.data_dir).await
+}
+
+#[tauri::command]
+async fn look_apply(
+    state: State<'_, AppState>,
+    path: String,
+    clip_id: String,
+    preset: Option<String>,
+    intensity: f64,
+) -> AppResult<()> {
+    looks::apply(&state.data_dir, Path::new(&path), &clip_id, preset.as_deref(), intensity).await
+}
+
+#[tauri::command]
+fn brandkit_list(state: State<'_, AppState>) -> Vec<brandkit::Kit> {
+    state.brands.list()
+}
+
+#[tauri::command]
+fn brandkit_save(state: State<'_, AppState>, kit: brandkit::Kit) -> AppResult<brandkit::Kit> {
+    state.brands.save(kit)
+}
+
+#[tauri::command]
+fn brandkit_logo(state: State<'_, AppState>, id: String, file: String) -> AppResult<brandkit::Kit> {
+    state.brands.set_logo(&id, Path::new(&file))
+}
+
+#[tauri::command]
+fn brandkit_delete(state: State<'_, AppState>, id: String) -> AppResult<()> {
+    state.brands.delete(&id)
+}
+
+#[tauri::command]
+fn project_brand_get(state: State<'_, AppState>, path: String) -> Option<brandkit::Kit> {
+    state.brands.of_project(Path::new(&path))
+}
+
+#[tauri::command]
+fn project_brand_set(state: State<'_, AppState>, path: String, id: Option<String>) -> AppResult<Option<brandkit::Kit>> {
+    state.brands.use_in(Path::new(&path), id.as_deref())
+}
+
+#[tauri::command]
+fn brandkit_brief(state: State<'_, AppState>, id: String) -> AppResult<String> {
+    Ok(state.brands.get(&id)?.brief())
+}
+
+#[tauri::command]
+async fn history_list(state: State<'_, AppState>, path: String) -> AppResult<Vec<history::Entry>> {
+    history::list(&state.data_dir, Path::new(&path)).await
+}
+
+#[tauri::command]
+async fn history_undo(state: State<'_, AppState>, path: String, id: String) -> AppResult<()> {
+    history::undo(&state.data_dir, Path::new(&path), &id).await
+}
+
+#[tauri::command]
+fn comments_list(state: State<'_, AppState>, path: String) -> Vec<comments::Comment> {
+    state.comments.list(Path::new(&path))
+}
+
+#[tauri::command]
+fn comments_add(
+    state: State<'_, AppState>,
+    path: String,
+    time: f64,
+    x: Option<f64>,
+    y: Option<f64>,
+    text: String,
+) -> AppResult<Vec<comments::Comment>> {
+    state.comments.add(Path::new(&path), time, x, y, &text)
+}
+
+#[tauri::command]
+fn comments_update(
+    state: State<'_, AppState>,
+    path: String,
+    id: String,
+    text: Option<String>,
+    resolved: Option<bool>,
+) -> AppResult<Vec<comments::Comment>> {
+    state.comments.update(Path::new(&path), &id, text.as_deref(), resolved)
+}
+
+#[tauri::command]
+fn comments_delete(state: State<'_, AppState>, path: String, id: String) -> AppResult<Vec<comments::Comment>> {
+    state.comments.delete(Path::new(&path), &id)
+}
+
+#[tauri::command]
+fn skills_list() -> Vec<skills::SkillInfo> {
+    skills::list(&skills::folder())
+}
+
+#[tauri::command]
+async fn sounds_search(query: String, commercial: bool) -> AppResult<Vec<openverse::Sound>> {
+    openverse::search(&query, commercial).await
+}
+
+#[tauri::command]
+async fn sounds_download(path: String, sound: openverse::Sound) -> AppResult<String> {
+    openverse::download(Path::new(&path), &sound).await
+}
+
+#[tauri::command]
+fn settings_get(state: State<'_, AppState>) -> Settings {
+    state.settings.get()
+}
+
+#[tauri::command]
+fn settings_set(state: State<'_, AppState>, settings: Settings) -> AppResult<Settings> {
+    state.settings.set(settings)
 }
 
 #[tauri::command]
@@ -271,6 +523,20 @@ async fn media_reveal(path: String, file: String) -> AppResult<()> {
     project::reveal_file(&target).await
 }
 
+/// The composition files that use a media file, so the window can warn before deleting it.
+#[tauri::command]
+fn media_used_by(path: String, file: String) -> AppResult<Vec<String>> {
+    let summary = project::inspect(Path::new(&path))?;
+    media::used_by(Path::new(&summary.path), &file)
+}
+
+/// Moves a media file to the Trash.
+#[tauri::command]
+fn media_trash(path: String, file: String) -> AppResult<()> {
+    let summary = project::inspect(Path::new(&path))?;
+    media::trash(Path::new(&summary.path), &file)
+}
+
 /// The voices the engine's text-to-speech offers.
 #[tauri::command]
 async fn voices_list(state: State<'_, AppState>) -> AppResult<Vec<serde_json::Value>> {
@@ -377,8 +643,20 @@ pub fn run() {
                 let _ = window.emit("jobs", list);
             }));
             tauri::async_runtime::spawn(jobs.clone().work());
+            let references = Arc::new(reference::ReferenceService::new(&data_dir));
+            let window = app.handle().clone();
+            references.listen(Arc::new(move |list| {
+                let _ = window.emit("references", list);
+            }));
+            let settings_dir = data_dir.clone();
+            tauri::async_runtime::spawn(references.clone().work(Arc::new(move || SettingsStore::new(&settings_dir).get())));
             app.manage(AppState {
                 recents: RecentStore::new(&data_dir),
+                settings: SettingsStore::new(&data_dir),
+                posters: posters::Posters::new(&data_dir),
+                brands: brandkit::BrandKits::new(&data_dir),
+                comments: comments::Comments::new(),
+                references,
                 preview: PreviewManager::new(&data_dir),
                 timeline: TimelineService::new(&data_dir),
                 agent: AgentService::new(&data_dir, Arc::new(ClaudeCode::default())),
@@ -420,10 +698,22 @@ pub fn run() {
             chat_forget_rules,
             voice_install,
             skills_install,
+            ytdlp_install,
+            reference_list,
+            reference_get,
+            reference_import,
+            reference_retry,
+            reference_stop,
+            reference_delete,
+            reference_search,
+            reference_brief,
             media_list,
             media_import,
             media_reveal,
+            media_used_by,
+            media_trash,
             voices_list,
+            voice_sample,
             jobs_list,
             job_start,
             job_cancel,
@@ -433,6 +723,35 @@ pub fn run() {
             launch_project,
             launch_autoplay,
             client_log,
+            settings_get,
+            sounds_search,
+            sounds_download,
+            comments_list,
+            comments_add,
+            comments_update,
+            comments_delete,
+            skills_list,
+            history_list,
+            history_undo,
+            looks_list,
+            look_apply,
+            brandkit_list,
+            brandkit_save,
+            brandkit_logo,
+            brandkit_delete,
+            brandkit_brief,
+            project_brand_get,
+            project_brand_set,
+            transcript_read,
+            media_silences,
+            timeline_cut,
+            media_peaks,
+            media_stills,
+            catalog_list,
+            catalog_add,
+            project_poster,
+            projects_folder,
+            settings_set,
         ])
         .build(tauri::generate_context!())
         .expect("RIROTE VISION could not start")
@@ -442,6 +761,7 @@ pub fn run() {
                 let state = app.state::<AppState>();
                 state.agent.stop();
                 state.jobs.stop_all();
+                state.references.stop_all();
                 tauri::async_runtime::block_on(state.preview.stop());
             }
         });

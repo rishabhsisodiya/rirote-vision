@@ -218,6 +218,44 @@ async fn probe_duration(path: &Path) -> Option<f64> {
     (seconds.is_finite() && seconds > 0.0).then_some(seconds)
 }
 
+/// The composition files that name `relative`: index.html and the files in
+/// compositions/. Deleting a file they name leaves a missing clip.
+pub fn used_by(project: &Path, relative: &str) -> AppResult<Vec<String>> {
+    resolve(project, relative)?;
+    let mut pages = vec![project.join("index.html")];
+    if let Ok(entries) = std::fs::read_dir(project.join("compositions")) {
+        let mut found: Vec<PathBuf> = entries.filter_map(Result::ok).map(|entry| entry.path()).collect();
+        found.sort();
+        pages.extend(found.into_iter().filter(|path| path.extension().is_some_and(|ext| ext == "html")));
+    }
+    // A composition in compositions/ names the file from its own folder too.
+    let name = Path::new(relative).file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+    Ok(pages
+        .iter()
+        .filter(|page| {
+            std::fs::read_to_string(page)
+                .is_ok_and(|text| text.contains(relative) || (!name.is_empty() && text.contains(&format!("/{name}\""))))
+        })
+        .map(|page| relative_path(project, page))
+        .collect())
+}
+
+/// Moves one media file of the project to the Trash, where it can be put back.
+pub fn trash(project: &Path, relative: &str) -> AppResult<()> {
+    let target = resolve(project, relative)?;
+    if !target.is_file() {
+        return Err(AppError::NotFound("That file is already gone.".into()));
+    }
+    if MediaKind::of(&target).is_none() {
+        return Err(AppError::InvalidInput("Only media files can be deleted here.".into()));
+    }
+    trash::delete(&target).map_err(|error| AppError::Io(format!("The file could not be moved to the Trash: {error}")))
+}
+
+fn relative_path(project: &Path, path: &Path) -> String {
+    relative(project, path)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -312,5 +350,29 @@ mod tests {
         for bad in ["", "../b/x.png", "/etc/passwd", "assets/../../x", "./x.png"] {
             assert!(resolve(project, bad).is_err(), "{bad}");
         }
+    }
+
+    #[test]
+    fn a_file_named_by_the_composition_is_reported_as_used() {
+        let project = tempfile::tempdir().unwrap();
+        let root = project.path();
+        std::fs::create_dir_all(root.join("assets/vo")).unwrap();
+        std::fs::create_dir_all(root.join("compositions")).unwrap();
+        std::fs::write(root.join("assets/vo/01.wav"), b"x").unwrap();
+        std::fs::write(root.join("assets/spare.png"), b"x").unwrap();
+        std::fs::write(root.join("index.html"), r#"<audio src="assets/vo/01.wav"></audio>"#).unwrap();
+        std::fs::write(root.join("compositions/end.html"), r#"<img src="../assets/vo/01.wav">"#).unwrap();
+        assert_eq!(used_by(root, "assets/vo/01.wav").unwrap(), ["index.html", "compositions/end.html"]);
+        assert!(used_by(root, "assets/spare.png").unwrap().is_empty());
+        assert!(used_by(root, "../outside.png").is_err());
+    }
+
+    #[test]
+    fn only_media_inside_the_project_can_be_trashed() {
+        let project = tempfile::tempdir().unwrap();
+        std::fs::write(project.path().join("index.html"), b"x").unwrap();
+        assert_eq!(trash(project.path(), "index.html").unwrap_err().code(), "invalid_input");
+        assert_eq!(trash(project.path(), "gone.png").unwrap_err().code(), "not_found");
+        assert!(trash(project.path(), "../x.png").is_err());
     }
 }

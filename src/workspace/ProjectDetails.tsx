@@ -1,25 +1,23 @@
 import { formatDuration, shortPath } from "../lib/format";
-import type { ReactNode } from "react";
 
 import type { ProjectSummary } from "../lib/types";
 import { Button } from "../ui/Button";
 import { Spinner } from "../ui/Spinner";
 import type { ProjectInfoState } from "./useProjectInfo";
 
-interface ProjectSidebarProps {
+interface ProjectDetailsProps {
   project: ProjectSummary;
   info: ProjectInfoState;
   onRetry: () => void;
   onCheckSetup: () => void;
   onReveal: () => void;
-  /** The media bin, which fills what is left of the sidebar. */
-  children: ReactNode;
 }
 
-export function ProjectSidebar(props: ProjectSidebarProps) {
+/** The side panel's Project tab: where the project is and what it is made of. */
+export function ProjectDetails(props: ProjectDetailsProps) {
   const { project, info, onRetry, onCheckSetup, onReveal } = props;
   return (
-    <aside className="pane sidebar" aria-label="Project">
+    <>
       <section className="sidebar__section">
         <h2 className="pane__heading">Project</h2>
         <p className="sidebar__name">{project.name}</p>
@@ -35,9 +33,7 @@ export function ProjectSidebar(props: ProjectSidebarProps) {
         <h2 className="pane__heading">Composition</h2>
         <Composition info={info} onRetry={onRetry} onCheckSetup={onCheckSetup} />
       </section>
-
-      <section className="sidebar__section sidebar__section--fill">{props.children}</section>
-    </aside>
+    </>
   );
 }
 

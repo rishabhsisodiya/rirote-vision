@@ -5,10 +5,13 @@ interface TitleBarProps {
   project: ProjectSummary;
   sidebarShown: boolean;
   assistantShown: boolean;
+  /** The assistant is changing the project: the tally light is on. */
+  onAir: boolean;
+  /** What it is doing, in a few words, for the tally's tooltip. */
+  onAirDetail: string | null;
   onToggleSidebar: () => void;
   onToggleAssistant: () => void;
   onExport: () => void;
-  onClose: () => void;
 }
 
 /** The window's top bar. Empty parts of it drag the window. */
@@ -17,14 +20,16 @@ export function TitleBar(props: TitleBarProps) {
     <header className="titlebar" data-tauri-drag-region>
       <div className="titlebar__lead">
         <IconButton
-          icon="sidebar"
-          label={props.sidebarShown ? "Hide project sidebar" : "Show project sidebar"}
-          pressed={props.sidebarShown}
-          onClick={props.onToggleSidebar}
+          icon="assistant"
+          label={props.assistantShown ? "Hide assistant (⌥⌘0)" : "Show assistant (⌥⌘0)"}
+          pressed={props.assistantShown}
+          onClick={props.onToggleAssistant}
         />
-        <Button variant="ghost" onClick={props.onClose}>
-          Projects
-        </Button>
+        {props.onAir ? (
+          <span className="tally" role="status" title={props.onAirDetail ?? "The assistant is editing"}>
+            On air
+          </span>
+        ) : null}
       </div>
       <h1 className="titlebar__title" data-tauri-drag-region>
         {props.project.name}
@@ -34,10 +39,10 @@ export function TitleBar(props: TitleBarProps) {
           Export
         </Button>
         <IconButton
-          icon="assistant"
-          label={props.assistantShown ? "Hide assistant" : "Show assistant"}
-          pressed={props.assistantShown}
-          onClick={props.onToggleAssistant}
+          icon="sidebar"
+          label={props.sidebarShown ? "Hide inspector (⌘0)" : "Show inspector (⌘0)"}
+          pressed={props.sidebarShown}
+          onClick={props.onToggleSidebar}
         />
       </div>
     </header>

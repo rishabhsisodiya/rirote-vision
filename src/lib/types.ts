@@ -32,7 +32,7 @@ export interface NewProjectInput {
 export type CheckStatus = "ok" | "warning" | "missing";
 
 /** A repair Check Setup can carry out itself. */
-export type SetupAction = "install-engine" | "install-voice" | "install-skills";
+export type SetupAction = "install-engine" | "install-voice" | "install-skills" | "install-ytdlp";
 
 export interface SetupCheck {
   id: string;
@@ -79,6 +79,10 @@ export interface Clip {
   src: string | null;
   /** How loud it plays, 1 being as recorded. Null for clips without sound. */
   volume: number | null;
+  /** How fast its media plays, 1 being as recorded. Null for clips without media. */
+  rate: number | null;
+  /** Where in its media file the clip starts, in seconds. */
+  mediaStart: number | null;
   /** Plays a media file. */
   media: boolean;
   /** Clips inside a nested composition are shown but not edited. */
@@ -104,7 +108,8 @@ export type EditOp =
   | { type: "delete"; clip: string }
   | { type: "duplicate"; clip: string }
   | { type: "place"; clip: string; start: number; track: number }
-  | { type: "setVolume"; clip: string; volume: number };
+  | { type: "setVolume"; clip: string; volume: number }
+  | { type: "setRate"; clip: string; rate: number };
 
 export interface ChatMessage {
   role: "user" | "assistant" | "tool" | "notice";
@@ -252,3 +257,183 @@ export type ErrorCode =
   | "timeout"
   | "io"
   | "unknown";
+
+/** The app's preferences (settings.rs). Empty model or effort leaves Claude Code's own. */
+export interface Settings {
+  assistantModel: "" | "fable" | "opus" | "sonnet";
+  assistantEffort: "" | "low" | "medium" | "high" | "xhigh" | "max";
+  instagramSearch: boolean;
+  cookieBrowser: "chrome" | "safari" | "firefox" | "brave" | "edge";
+  referenceMaxMinutes: number;
+  projectsFolder: string;
+}
+
+// --- references (reference/model.rs) ---------------------------------------
+
+export type ReferenceStepState = "pending" | "running" | "done" | "failed" | "skipped";
+
+export interface ReferenceStep {
+  name: "download" | "shots" | "keyframes" | "transcribe" | "analyze";
+  state: ReferenceStepState;
+  seconds: number | null;
+  error: string | null;
+}
+
+export interface Reference {
+  id: string;
+  /** The link it came from, or the file's name. */
+  source: string;
+  platform: "youtube" | "instagram" | "tiktok" | "x" | "web" | "file";
+  title: string | null;
+  creator: string | null;
+  duration: number | null;
+  width: number | null;
+  height: number | null;
+  addedAt: number;
+  steps: ReferenceStep[];
+  status: "queued" | "running" | "ready" | "failed";
+  /** Full path of the first shot's still. */
+  poster: string | null;
+  folder: string;
+}
+
+/** The analyst's fields keep the snake_case of the schema it answers in. */
+export interface BlueprintShot {
+  index: number;
+  shot_type: string;
+  camera_motion: string;
+  subject_pose: string;
+  subject_action: string;
+  on_screen_text: string | null;
+  product_visible: boolean;
+  emotion: string;
+  energy: string;
+  start: number;
+  end: number;
+  duration: number;
+  keyframe: string | null;
+}
+
+export interface Blueprint {
+  referenceId: string;
+  source: string;
+  language: string | null;
+  model: string;
+  createdAt: number;
+  summary: string;
+  hook: { window_seconds: number; hook_type: string; analysis: string; spoken: string | null; visual: string };
+  structure: { role: string; start: number; end: number; summary: string }[];
+  pacing: {
+    totalDuration: number;
+    shotCount: number;
+    avgShotLength: number;
+    minShotLength: number;
+    maxShotLength: number;
+    cutsPer10s: number;
+  };
+  music: { mood: string; tempo: string; notes: string | null };
+  captionStyle: { present: boolean; position: string; style: string; animation: string | null };
+  shots: BlueprintShot[];
+}
+
+export interface ReferenceDetail {
+  reference: Reference;
+  blueprint: Blueprint | null;
+}
+
+/** A search result, not downloaded until it is picked. */
+export interface FoundVideo {
+  id: string;
+  url: string;
+  title: string;
+  creator: string | null;
+  duration: number | null;
+  views: number | null;
+  platform: "youtube" | "instagram";
+  /** Full path of a cached thumbnail. */
+  thumbnail: string | null;
+}
+
+// --- what the timeline draws inside clips (media_cache.rs) -----------------
+
+export interface MediaPeaks {
+  /** Seconds of sound each value covers. */
+  step: number;
+  /** Loudness of each step, 0 to 255. */
+  values: number[];
+}
+
+export interface MediaStill {
+  time: number;
+  path: string;
+}
+
+// --- the engine's catalogue (catalog.rs) -----------------------------------
+
+export type CatalogShelf = "transition" | "captions" | "texture" | "title-card" | "overlay";
+
+export interface CatalogItem {
+  name: string;
+  title: string;
+  description: string;
+  tags: string[];
+  duration: number | null;
+}
+
+export interface CatalogInstalled {
+  name: string;
+  snippet: string;
+  files: string[];
+}
+
+// --- looks and brand kits (looks.rs, brandkit.rs) --------------------------
+
+export interface Look {
+  id: string;
+  label: string;
+}
+
+export interface BrandColour {
+  /** What it is for: "Background", "Accent", "Text". */
+  name: string;
+  hex: string;
+}
+
+export interface BrandKit {
+  /** Empty for a kit not saved yet. */
+  id: string;
+  name: string;
+  colours: BrandColour[];
+  headingFont: string;
+  bodyFont: string;
+  /** Full path of the logo in the kit's folder. */
+  logo: string | null;
+  tone: string;
+  website: string;
+  updatedAt: number;
+}
+
+/** A review note pinned to a moment and a spot on the frame (comments.rs). */
+export interface Comment {
+  id: string;
+  time: number;
+  /** Fractions of the frame's width and height, when pinned to a spot. */
+  x: number | null;
+  y: number | null;
+  text: string;
+  resolved: boolean;
+  createdAt: number;
+}
+
+/** A free sound from Openverse (openverse.rs). */
+export interface FreeSound {
+  id: string;
+  title: string;
+  creator: string | null;
+  license: string;
+  duration: number | null;
+  url: string;
+  page: string | null;
+  attribution: string;
+  filetype: string | null;
+}

@@ -45,6 +45,10 @@ pub struct Clip {
     pub src: Option<String>,
     /// How loud it plays, 1 being as recorded. None for clips without sound.
     pub volume: Option<f64>,
+    /// How fast its media plays, 1 being as recorded. None for clips without media.
+    pub rate: Option<f64>,
+    /// Where in its media file the clip starts, in seconds.
+    pub media_start: Option<f64>,
     /// Plays a media file, so its start cannot simply be re-timed.
     pub media: bool,
     /// Clips inside a sub-composition are shown but not edited here.
@@ -82,6 +86,8 @@ pub enum EditOp {
     Place { clip: String, start: f64, track: i64 },
     /// Set how loud the clip plays; 1 is as recorded.
     SetVolume { clip: String, volume: f64 },
+    /// Set how fast the clip's media plays; 1 is as recorded.
+    SetRate { clip: String, rate: f64 },
 }
 
 impl EditOp {
@@ -94,7 +100,8 @@ impl EditOp {
             | Self::Delete { clip }
             | Self::Duplicate { clip }
             | Self::Place { clip, .. }
-            | Self::SetVolume { clip, .. } => clip,
+            | Self::SetVolume { clip, .. }
+            | Self::SetRate { clip, .. } => clip,
         }
     }
 }
@@ -236,6 +243,106 @@ impl TimelineService {
         Ok(self.current(timeline, &mut histories, project))
     }
 
+    /// Removes stretches of one clip's media, given in timeline seconds, and
+    /// pulls everything that came after each stretch back by its length. One
+    /// undo step, however many engine edits it takes.
+    pub async fn cut(&self, data_dir: &Path, project: &Path, clip: &str, ranges: &[(f64, f64)]) -> AppResult<TimelineState> {
+        let mut histories = self.histories.lock().await;
+        let before = read_timeline(data_dir, project).await?;
+        let first = before
+            .clips
+            .iter()
+            .find(|candidate| candidate.reference == clip)
+            .ok_or_else(|| AppError::NotFound("That clip is no longer on the timeline.".into()))?;
+        if !first.editable {
+            return Err(AppError::Refused("This clip belongs to a nested composition and cannot be cut from here yet.".into()));
+        }
+        let family = (first.src.clone(), first.track);
+        let ranges = cut_ranges(ranges, first.start, first.end);
+        if ranges.is_empty() {
+            return Err(AppError::InvalidInput("There is nothing to cut in that selection.".into()));
+        }
+
+        let mut receipts = Entry::new();
+        for &(from, to) in ranges.iter().rev() {
+            if let Err(error) = self.cut_one(data_dir, project, &family, from, to, &mut receipts).await {
+                let _ = self.revert(data_dir, project, &receipts).await;
+                return Err(error);
+            }
+        }
+
+        let history = histories.entry(key(project)).or_default();
+        history.undo.push(receipts);
+        history.redo.clear();
+        if history.undo.len() > MAX_HISTORY {
+            history.undo.remove(0);
+        }
+        let timeline = read_timeline(data_dir, project).await?;
+        Ok(self.current(timeline, &mut histories, project))
+    }
+
+    async fn cut_one(
+        &self,
+        data_dir: &Path,
+        project: &Path,
+        family: &(Option<String>, i64),
+        from: f64,
+        to: f64,
+        receipts: &mut Entry,
+    ) -> AppResult<()> {
+        const NEAR: f64 = 0.002;
+        let same = |clip: &Clip| clip.src == family.0 && clip.track == family.1 && clip.editable;
+        let now = read_timeline(data_dir, project).await?;
+        let piece = now
+            .clips
+            .iter()
+            .find(|clip| same(clip) && clip.start <= from + NEAR && clip.end >= to - NEAR)
+            .cloned()
+            .ok_or_else(|| AppError::Refused("That part of the clip has been moved; read the transcript again.".into()))?;
+        let reference = safe_reference(&piece.reference)?;
+        let edit = |name: &str, target: &str, rest: &[String]| {
+            let mut args = vec!["timeline".to_owned(), name.to_owned(), target.to_owned()];
+            args.extend_from_slice(rest);
+            args.push("--json".into());
+            args
+        };
+        let run = |args: Vec<String>| {
+            let backups = &self.backups;
+            async move {
+                let receipt = run_edit(data_dir, project, &args).await?;
+                backups.keep(project, &receipt);
+                Ok::<Value, AppError>(receipt)
+            }
+        };
+        if piece.end - to >= MIN_CLIP {
+            receipts.push(run(edit("split", &reference, &[seconds(to)?])).await?);
+        }
+        let middle = if from - piece.start >= MIN_CLIP {
+            receipts.push(run(edit("split", &reference, &[seconds(from)?])).await?);
+            let after = read_timeline(data_dir, project).await?;
+            after
+                .clips
+                .iter()
+                .find(|clip| same(clip) && (clip.start - from).abs() < 0.01)
+                .map(|clip| clip.reference.clone())
+                .ok_or_else(|| AppError::ToolFailed("The cut could not find the piece it made.".into()))?
+        } else {
+            piece.reference.clone()
+        };
+        receipts.push(run(edit("delete", &safe_reference(&middle)?, &[])).await?);
+
+        // Pull what came after the cut back, earliest first, so nothing overlaps.
+        let gap = to - from;
+        let after = read_timeline(data_dir, project).await?;
+        let mut later: Vec<&Clip> = after.clips.iter().filter(|clip| clip.editable && clip.start >= to - NEAR).collect();
+        later.sort_by(|a, b| a.start.total_cmp(&b.start));
+        for clip in later {
+            let target = safe_reference(&clip.reference)?;
+            receipts.push(run(edit("move", &target, &[seconds((clip.start - gap).max(0.0))?])).await?);
+        }
+        Ok(())
+    }
+
     pub async fn undo(&self, data_dir: &Path, project: &Path) -> AppResult<TimelineState> {
         self.step_history(data_dir, project, Direction::Undo).await
     }
@@ -360,13 +467,37 @@ fn parse_clip(row: &Value) -> Option<Clip> {
         end: number("absEnd").or_else(|| number("end"))?,
         src: text("src"),
         volume: number("volume").or(matches!(tag.as_str(), "audio" | "video").then_some(1.0)),
+        rate: matches!(tag.as_str(), "audio" | "video").then(|| number("playbackRate").unwrap_or(1.0)),
+        media_start: matches!(tag.as_str(), "audio" | "video").then(|| number("mediaStart").unwrap_or(0.0)),
         media: matches!(tag.as_str(), "audio" | "video"),
         editable: !row.get("nested").and_then(Value::as_bool).unwrap_or(false),
     })
 }
 
+/// The stretches to cut, kept inside the clip, merged where they touch,
+/// earliest first; slivers too short to matter are dropped.
+fn cut_ranges(ranges: &[(f64, f64)], start: f64, end: f64) -> Vec<(f64, f64)> {
+    let mut kept: Vec<(f64, f64)> = ranges
+        .iter()
+        .filter(|(from, to)| from.is_finite() && to.is_finite())
+        .map(|&(from, to)| (from.min(to).max(start), from.max(to).min(end)))
+        .filter(|(from, to)| to - from >= 0.04)
+        .collect();
+    kept.sort_by(|a, b| a.0.total_cmp(&b.0));
+    let mut merged: Vec<(f64, f64)> = Vec::new();
+    for (from, to) in kept {
+        match merged.last_mut() {
+            Some(last) if from <= last.1 + 0.01 => last.1 = last.1.max(to),
+            _ => merged.push((from, to)),
+        }
+    }
+    merged
+}
+
 /// The loudest a clip may be set: twice as recorded.
 const MAX_VOLUME: f64 = 2.0;
+/// The slowest and fastest a clip's media may play.
+const RATES: std::ops::RangeInclusive<f64> = 0.25..=4.0;
 const MAX_TRACK: i64 = 99;
 
 /// The engine commands that carry out `op` on `clip`, as argument lists.
@@ -468,6 +599,16 @@ fn plan(op: &EditOp, clip: &Clip, others: &[Clip]) -> AppResult<Vec<Vec<String>>
             }
             vec![command("set", &[format!("volume={}", seconds(volume)?)])]
         }
+        EditOp::SetRate { rate, .. } => {
+            let rate = finite(rate)?;
+            if clip.rate.is_none() {
+                return Err(AppError::Refused("Only video and sound clips have a speed.".into()));
+            }
+            if !RATES.contains(&rate) {
+                return Err(AppError::InvalidInput("Speed goes from 0.25× to 4×.".into()));
+            }
+            vec![command("set", &[format!("rate={}", seconds(rate)?)])]
+        }
     };
     Ok(steps)
 }
@@ -557,6 +698,8 @@ mod tests {
             end: 6.0,
             src: None,
             volume: media.then_some(1.0),
+            rate: media.then_some(1.0),
+            media_start: media.then_some(0.0),
             media,
             editable: true,
         }
@@ -681,6 +824,31 @@ mod tests {
         assert_eq!(plan(&volume(2.5), &clip(true), &[]).unwrap_err().code(), "invalid_input");
         assert_eq!(plan(&volume(-0.1), &clip(true), &[]).unwrap_err().code(), "invalid_input");
         assert_eq!(plan(&volume(0.5), &clip(false), &[]).unwrap_err().code(), "refused");
+    }
+
+    #[test]
+    fn cut_ranges_are_clamped_merged_and_ordered() {
+        assert_eq!(cut_ranges(&[(5.0, 6.0), (1.0, 2.0), (1.9, 2.5)], 0.0, 10.0), vec![(1.0, 2.5), (5.0, 6.0)]);
+        assert_eq!(cut_ranges(&[(-1.0, 0.5), (9.5, 12.0)], 0.0, 10.0), vec![(0.0, 0.5), (9.5, 10.0)]);
+        assert_eq!(cut_ranges(&[(3.0, 3.01), (f64::NAN, 4.0)], 0.0, 10.0), vec![]);
+        assert_eq!(cut_ranges(&[(4.0, 3.0)], 0.0, 10.0), vec![(3.0, 4.0)], "backwards ranges are turned round");
+    }
+
+    #[test]
+    fn speed_is_for_media_clips_and_stays_in_range() {
+        let rate = |rate: f64| EditOp::SetRate { clip: "#vo".into(), rate };
+        assert_eq!(args(rate(1.5), &clip(true)), ["timeline set #vo rate=1.5 --json"]);
+        assert_eq!(plan(&rate(8.0), &clip(true), &[]).unwrap_err().code(), "invalid_input");
+        assert_eq!(plan(&rate(0.1), &clip(true), &[]).unwrap_err().code(), "invalid_input");
+        assert_eq!(plan(&rate(2.0), &clip(false), &[]).unwrap_err().code(), "refused");
+    }
+
+    #[test]
+    fn a_media_row_carries_its_speed() {
+        let row = json!({"id": "v", "ref": "#v", "kind": "video", "trackKind": "video", "start": 1.0, "end": 5.0, "playbackRate": 1.5});
+        assert_eq!(parse_clip(&row).unwrap().rate, Some(1.5));
+        let still = json!({"id": "t", "ref": "#t", "kind": "div", "start": 0.0, "end": 2.0});
+        assert_eq!(parse_clip(&still).unwrap().rate, None);
     }
 
     #[test]

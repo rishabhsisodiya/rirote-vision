@@ -82,6 +82,7 @@ test("a saved conversation loads, still running or not", () => {
 
 test("tools and inline styles are put in words", () => {
   assert.equal(toolVerb("Edit"), "Edited");
+  assert.equal(toolVerb("Bash"), "", "a shell step is shown by its own description");
   assert.equal(toolVerb("mcp__thing"), "mcp__thing");
   assert.equal(toolVerb(undefined), "Used a tool");
   assert.deepEqual(inlineRuns("Moved `s1` to **3 s**."), [

@@ -17,11 +17,12 @@ function claimedByFocus(target: EventTarget | null, key: string): boolean {
  * Space or K plays or pauses; L and J make playback faster and slower; the
  * arrows step a frame (a second with Shift); Home and End jump.
  */
-export function usePlaybackKeys(player: PlayerControls): void {
+export function usePlaybackKeys(player: PlayerControls, enabled = true): void {
   const { toggle, step, seek, shiftRate, playback } = player;
   const { duration } = playback;
 
   useEffect(() => {
+    if (!enabled) return;
     const onKey = (event: KeyboardEvent) => {
       if (event.metaKey || event.ctrlKey || event.altKey) return;
       if (claimedByFocus(event.target, event.key)) return;
@@ -59,5 +60,5 @@ export function usePlaybackKeys(player: PlayerControls): void {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [toggle, step, seek, shiftRate, duration]);
+  }, [enabled, toggle, step, seek, shiftRate, duration]);
 }

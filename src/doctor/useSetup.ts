@@ -7,6 +7,7 @@ const INSTALLERS: Record<SetupAction, () => Promise<SetupReport>> = {
   "install-engine": api.engineInstall,
   "install-voice": api.voiceInstall,
   "install-skills": api.skillsInstall,
+  "install-ytdlp": api.ytdlpInstall,
 };
 
 export interface SetupState {

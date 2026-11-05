@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::AppResult;
 use crate::project::ProjectSummary;
+use crate::store;
 
 const MAX_RECENTS: usize = 20;
 
@@ -79,24 +80,11 @@ impl RecentStore {
 
     /// An unreadable or damaged file counts as an empty list.
     fn read(&self) -> Vec<Stored> {
-        std::fs::read_to_string(&self.file)
-            .ok()
-            .and_then(|text| serde_json::from_str(&text).ok())
-            .unwrap_or_default()
+        store::read_or_default(&self.file)
     }
 
-    /// Written beside the file and renamed over it, so a crash never leaves
-    /// half a list.
     fn write(&self, entries: &[Stored]) -> AppResult<()> {
-        if let Some(dir) = self.file.parent() {
-            std::fs::create_dir_all(dir)?;
-        }
-        let text = serde_json::to_string_pretty(entries)
-            .map_err(|error| crate::error::AppError::Io(error.to_string()))?;
-        let draft = self.file.with_extension("json.tmp");
-        std::fs::write(&draft, text)?;
-        std::fs::rename(&draft, &self.file)?;
-        Ok(())
+        store::write_atomic(&self.file, entries)
     }
 }
 

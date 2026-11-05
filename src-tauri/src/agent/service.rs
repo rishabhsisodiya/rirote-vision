@@ -110,7 +110,7 @@ impl AgentService {
             messages: chat.messages,
             busy: running.is_some(),
             rules: running.map(|turn| turn.rules.clone()).unwrap_or(chat.rules),
-            trust: chat.trust,
+            trust: Some(chat.trust.unwrap_or(Trust::DEFAULT)),
         }
     }
 
@@ -133,9 +133,7 @@ impl AgentService {
         self.engine.ready()?;
 
         let mut chat = self.store.load(project);
-        let trust = chat.trust.ok_or_else(|| {
-            AppError::Refused("Choose how much the assistant may do in this project first.".into())
-        })?;
+        let trust = chat.trust.unwrap_or(Trust::DEFAULT);
         let turn = self.turns.fetch_add(1, Ordering::Relaxed);
         let stdin: SharedStdin = Arc::default();
         {
@@ -156,11 +154,15 @@ impl AgentService {
             });
         }
 
+        // Everything the turn writes becomes one entry in the engine's history,
+        // so the whole turn can be undone. Best effort: a turn still runs without it.
+        crate::history::begin(&self.data_dir, project, prompt).await;
         let started = self.start(project, &chat, &with_context(prompt, context), &stdin).await;
         let child = match started {
             Ok(child) => child,
             Err(error) => {
                 lock(&self.active).take();
+                crate::history::end(&self.data_dir, project).await;
                 return Err(error);
             }
         };
@@ -188,14 +190,16 @@ impl AgentService {
 
     async fn start(&self, project: &Path, chat: &Chat, request: &str, stdin: &SharedStdin) -> AppResult<Child> {
         let briefing = briefing(&self.data_dir);
+        let settings = crate::settings::SettingsStore::new(&self.data_dir).get();
         let turn = Turn {
             project,
             resume: chat.session.as_deref(),
             briefing: &briefing,
-            // `send` refuses before this point when no level has been chosen.
-            trust: chat.trust.unwrap_or(Trust::Ask),
+            trust: chat.trust.unwrap_or(Trust::DEFAULT),
             rules: &chat.rules,
             data_dir: &self.data_dir,
+            model: &settings.assistant_model,
+            effort: &settings.assistant_effort,
         };
         let mut command = self.engine.command(&turn)?;
         // Its own process group, so stopping it stops what it started too.
@@ -313,6 +317,7 @@ impl Run {
             }
         }
         let _ = child.wait().await;
+        crate::history::end(&self.data_dir, &self.project).await;
         let stderr = match errors {
             Some(task) => task.await.unwrap_or_default(),
             None => String::new(),
@@ -389,7 +394,9 @@ impl Run {
             .unwrap_or((Vec::new(), Trust::Ask));
         // At full trust nothing reaches the user. What Claude Code refuses by
         // the user's own deny rules never gets this far.
-        if trust == Trust::Full || policy::allowed(&request, &self.project, &rules) {
+        // At trusted video work, commands that only read the project pass too.
+        let reads_only = trust == Trust::Trusted && policy::only_reads(&request, &self.project);
+        if trust == Trust::Full || reads_only || policy::allowed(&request, &self.project, &rules) {
             let _ = write_line(&self.stdin, &self.engine.answer_line(&request, true)).await;
             return;
         }
@@ -481,6 +488,20 @@ the app's own copy at {engine}. \
 Keep every change inside the project folder, and do not render a video unless asked. \
 Requests here are edits to a video, not software features: carry them out directly instead of \
 running a multi-phase development workflow, unless the user asks for a plan. \
+Use only free sources that need no account, sign-in, API key or payment. Never use HeyGen, never \
+suggest signing in to anything, and never ask the user to run a command: they cannot type into a \
+terminal here. For sound, use the sound effects bundled with HyperFrames, music made on this Mac, \
+or Openverse (https://api.openverse.org/v1/audio/, no key needed); save downloads in assets/sounds/ \
+and add each one's credit line to assets/sounds/CREDITS.txt. For a voiceover, use `hyperframes tts`: \
+a free, natural voice model (Kokoro) that runs on this Mac with no sign-in; `hyperframes tts --list` \
+names its voices. When a video explains, teaches or tells a story, give it a voiceover unless the \
+user says not to. \
+Ask before you start when the request depends on something only the user knows and does not name: \
+which website, product, brand, account, file or source they mean (\"my website\", \"my app\", \"our \
+logo\"). Reply with one short question and stop; do not guess and do not go looking. Never use \
+accounts this Mac is signed in to, such as the GitHub command line (gh), git credentials, cloud \
+tools, browser sessions or email, to find material, unless the user names that source in this \
+conversation; a public web address the user gives may be fetched. \
 A message may begin with an [Editor state] line giving the playhead and the selected clip; use it \
 to resolve words such as \"here\" and \"this clip\". \
 Reply briefly and in plain language: say what changed in the video, not how the code changed.",
@@ -492,6 +513,14 @@ Reply briefly and in plain language: say what changed in the video, not how the 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_briefing_keeps_to_free_sources_and_asks_before_guessing_whose_material() {
+        let text = briefing(Path::new("/tmp/rv"));
+        assert!(text.contains("Never use HeyGen"));
+        assert!(text.contains("Reply with one short question and stop"));
+        assert!(text.contains("GitHub command line (gh)"));
+    }
 
     #[test]
     fn the_editor_state_goes_in_front_of_the_request() {

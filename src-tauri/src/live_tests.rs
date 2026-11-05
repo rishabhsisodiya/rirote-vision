@@ -138,8 +138,9 @@ async fn install_check_create_and_read_a_project() {
     let page = fetch(&session.url).await;
     assert!(page.contains("data-composition-id"), "the preview serves the composition");
     let runtime = fetch(&session.url.replace("/projects/live-test-film/preview", "/runtime.js")).await;
-    assert!(runtime.contains("Xt=.15,ap=1/16"), "the preview runtime has the looser sync tolerance");
-    assert!(!runtime.contains("Xt=.04,ap=1/16"));
+    // Since 0.9 the runtime treats audio in WebKit (this app's window) with
+    // its own looser tolerance, which the app used to patch in itself.
+    assert!(runtime.contains("AppleWebKit"), "the preview runtime knows about WebKit");
 
     let index = project_dir.join("index.html");
     let edited = std::fs::read_to_string(&index).unwrap().replace("</body>", "<!-- edit --></body>");
@@ -296,6 +297,17 @@ async fn assistant_edits_a_real_project_from_a_plain_request() {
     let title = timeline.timeline.clips.iter().find(|clip| clip.id == "title").expect("title is still there");
     println!("title now {}–{}", title.start, title.end);
     assert!((title.end - 5.0).abs() < 0.01, "the clip ends at the playhead");
+
+    // The turn is one entry in the engine's history, and undoing it puts the clip back.
+    tokio::time::sleep(Duration::from_millis(500)).await;
+    let entries = crate::history::list(data.path(), &project_dir).await.expect("history lists");
+    println!("{entries:?}");
+    let turn = entries.iter().find(|entry| entry.by == "agent").expect("the turn was recorded");
+    assert_eq!(turn.label, "Make this clip end here.");
+    crate::history::undo(data.path(), &project_dir, &turn.id).await.expect("the turn is undone");
+    let after = TimelineService::new(data.path()).read(data.path(), &project_dir).await.expect("timeline reads");
+    let title = after.timeline.clips.iter().find(|clip| clip.id == "title").unwrap();
+    assert!((title.end - 10.0).abs() < 0.01, "undoing the turn restores the clip");
 }
 
 /// Voiceover, captions and a cut-out made for real, through the queue.
@@ -408,8 +420,6 @@ async fn export_renders_a_real_film() {
     let created = project::create(data.path(), work.path(), "Export Film", Resolution::Portrait).await.expect("project");
     let project_dir = std::path::PathBuf::from(&created.path);
 
-    // The preview tuning must leave the export's own runtime intact.
-    assert_eq!(hyperframes::tune_preview(data.path()).expect("tuning runs"), 1);
     let checked = render::check(data.path(), &project_dir).await.expect("checks run");
     println!("{checked:?}");
     assert!(checked.ok, "a blank project has nothing wrong with it");
@@ -580,4 +590,251 @@ Then reply with the single word done.",
     assert!(asked.is_empty(), "full trust asks nothing: {asked:#?}");
     let asked = run(data.path(), &project_dir, Trust::Trusted, request.into()).await;
     assert_eq!(asked.len(), 1, "the same request asks at the trusted level: {asked:#?}");
+}
+
+#[tokio::test]
+#[ignore = "downloads yt-dlp and the engine, searches YouTube and runs Claude Code on your plan"]
+async fn a_reference_is_studied_end_to_end() {
+    use crate::reference::{model::StepState, ytdlp, ReferenceService};
+    use crate::settings::Settings;
+
+    let data = tempfile::tempdir().unwrap();
+    let work = tempfile::tempdir().unwrap();
+    hyperframes::install(data.path()).await.expect("engine installs");
+    ytdlp::install(data.path()).await.expect("yt-dlp installs and its checksum matches");
+    assert!(ytdlp::version(data.path()).await.is_some());
+
+    // A two-shot clip with speech: navy, then orange, cut at 2 s.
+    let clip = work.path().join("two shots.mp4");
+    let speech = work.path().join("speech.aiff");
+    let said = std::process::Command::new("say")
+        .arg("-o").arg(&speech).arg("Your tickets are lying to you. Every ticket knows its owner.")
+        .status().unwrap();
+    assert!(said.success());
+    let made = std::process::Command::new("ffmpeg")
+        .args(["-y", "-v", "error", "-f", "lavfi", "-i", "color=c=navy:s=360x640:d=2", "-f", "lavfi", "-i", "color=c=orange:s=360x640:d=2", "-i"])
+        .arg(&speech)
+        .args(["-filter_complex", "[0][1]concat=n=2:v=1:a=0[v]", "-map", "[v]", "-map", "2:a", "-shortest", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac"])
+        .arg(&clip)
+        .status().unwrap();
+    assert!(made.success());
+
+    let service = Arc::new(ReferenceService::new(data.path()));
+    let settings = Settings { assistant_model: "haiku".into(), ..Settings::default() };
+    let worker_settings = settings.clone();
+    tokio::spawn(service.clone().work(Arc::new(move || worker_settings.clone())));
+    let added = service.import(None, Some(clip.to_string_lossy().into_owned()), &settings).await.expect("file is added");
+    assert!(added.meta.id.starts_with("file-two-shots-"), "{}", added.meta.id);
+
+    let mut detail = service.get(&added.meta.id).unwrap();
+    for _ in 0..600 {
+        if matches!(detail.reference.status, "ready" | "failed") {
+            break;
+        }
+        tokio::time::sleep(Duration::from_secs(1)).await;
+        detail = service.get(&added.meta.id).unwrap();
+    }
+    for step in &detail.reference.steps {
+        println!("{} {:?} {:?} {:?}", step.name, step.state, step.seconds, step.error);
+    }
+    assert_eq!(detail.reference.status, "ready");
+    assert!(detail.reference.steps.iter().all(|step| step.state == StepState::Done));
+    let blueprint = detail.blueprint.expect("a blueprint");
+    println!("{}", serde_json::to_string_pretty(&blueprint).unwrap());
+    assert_eq!(blueprint.pacing.shot_count, 2, "the cut at 2 s is found");
+    assert_eq!(blueprint.shots.len(), 2);
+    assert!(detail.reference.poster.is_some());
+    let brief = service.brief(&added.meta.id, "a launch video for rirote.com", crate::reference::Narration::Auto).unwrap();
+    assert!(brief.contains("do not copy"));
+
+    // Adding the same file again returns the studied reference.
+    let again = service.import(None, Some(clip.to_string_lossy().into_owned()), &settings).await.unwrap();
+    assert_eq!((again.meta.id.as_str(), again.status), (added.meta.id.as_str(), "ready"));
+
+    let found = service.search("product launch video", "youtube", &settings).await.expect("YouTube search");
+    println!("{} results; first: {:?}", found.len(), found.first());
+    assert!(found.len() >= 5);
+    assert!(found.iter().filter(|item| item.thumbnail.is_some()).count() >= 3, "thumbnails are cached");
+    let refused = service.search("motiongraphics", "instagram", &settings).await.unwrap_err();
+    assert_eq!(refused.code(), "refused", "Instagram is off unless Settings allow it");
+
+    service.delete(&added.meta.id).unwrap();
+    assert!(service.list().is_empty());
+}
+
+#[tokio::test]
+#[ignore = "downloads the engine and reads its catalogue"]
+async fn timeline_visuals_and_the_catalogue_work() {
+    use crate::{catalog, media_cache};
+
+    let data = tempfile::tempdir().unwrap();
+    let work = tempfile::tempdir().unwrap();
+    hyperframes::install(data.path()).await.expect("engine installs");
+    let created = project::create(data.path(), work.path(), "Visuals", Resolution::Landscape).await.expect("project");
+    let project_dir = std::path::PathBuf::from(&created.path);
+    std::fs::create_dir_all(project_dir.join("assets")).unwrap();
+    let clip = project_dir.join("assets/tone.mp4");
+    let made = std::process::Command::new("ffmpeg")
+        .args(["-y", "-v", "error", "-f", "lavfi", "-i", "testsrc=s=320x180:d=6", "-f", "lavfi", "-i", "sine=f=440:d=6", "-shortest", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac"])
+        .arg(&clip)
+        .status()
+        .unwrap();
+    assert!(made.success());
+
+    let peaks = media_cache::peaks(data.path(), &project_dir, "assets/tone.mp4").await.expect("peaks");
+    assert!(peaks.values.len() > 200 && peaks.values.iter().any(|v| *v > 60), "the test tone (1/8 of full scale) shows");
+    let again = media_cache::peaks(data.path(), &project_dir, "assets/tone.mp4").await.unwrap();
+    assert_eq!(again, peaks, "the cache answers the second time");
+    let stills = media_cache::stills(data.path(), &project_dir, "assets/tone.mp4").await.expect("stills");
+    assert_eq!(stills.len(), 3);
+    assert!(media_cache::peaks(data.path(), &project_dir, "../outside.mp4").await.is_err());
+
+    let transitions = catalog::list(data.path(), "transition").await.expect("catalogue");
+    println!("{} transitions", transitions.len());
+    assert!(transitions.len() > 10);
+    let installed = catalog::add(data.path(), &project_dir, &transitions[0].name).await.expect("added");
+    println!("{installed:?}");
+    assert!(installed.snippet.contains("data-composition-src"));
+    assert!(installed.files.iter().all(|file| project_dir.join(file).is_file()));
+}
+
+#[tokio::test]
+#[ignore = "downloads the engine and edits a real project"]
+async fn cutting_words_pulls_the_rest_back_in_one_undo() {
+    let data = tempfile::tempdir().unwrap();
+    let work = tempfile::tempdir().unwrap();
+    hyperframes::install(data.path()).await.expect("engine installs");
+    let created = project::create(data.path(), work.path(), "Cut", Resolution::Landscape).await.expect("project");
+    let dir = std::path::PathBuf::from(&created.path);
+    std::fs::create_dir_all(dir.join("assets")).unwrap();
+    let made = std::process::Command::new("ffmpeg")
+        .args(["-y", "-v", "error", "-f", "lavfi", "-i", "testsrc=s=320x180:d=6", "-f", "lavfi", "-i", "sine=f=440:d=6", "-shortest", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac"])
+        .arg(dir.join("assets/talk.mp4"))
+        .status()
+        .unwrap();
+    assert!(made.success());
+    let index = dir.join("index.html");
+    let html = std::fs::read_to_string(&index).unwrap().replace(
+        r#"<h1 id="title" class="clip" data-start="0" data-duration="10" data-track-index="0">Title</h1>"#,
+        r#"<video id="talk" class="clip" src="assets/talk.mp4" data-start="0" data-duration="4" data-track-index="1"></video>
+      <h1 id="title" class="clip" data-start="5" data-duration="3" data-track-index="0">Title</h1>"#,
+    );
+    assert!(html.contains(r#"id="talk""#), "the blank project's title line changed; update this test");
+    std::fs::write(&index, html).unwrap();
+
+    let timelines = TimelineService::new(data.path());
+    let spans = |state: &crate::timeline::TimelineState| {
+        let mut list: Vec<(String, f64, f64)> = state.timeline.clips.iter().map(|c| (c.src.clone().unwrap_or_default(), c.start, c.end)).collect();
+        list.sort_by(|a, b| a.1.total_cmp(&b.1));
+        list
+    };
+    let before = timelines.read(data.path(), &dir).await.expect("reads");
+    let cut = timelines.cut(data.path(), &dir, "#talk", &[(1.0, 2.0)]).await.expect("cut");
+    println!("{:?}", spans(&cut));
+    let talk: Vec<_> = spans(&cut).into_iter().filter(|(src, ..)| src == "assets/talk.mp4").map(|(_, s, e)| (s, e)).collect();
+    assert_eq!(talk, vec![(0.0, 1.0), (1.0, 3.0)], "the second piece closes the gap");
+    let title = cut.timeline.clips.iter().find(|c| c.id == "title").unwrap();
+    assert_eq!((title.start, title.end), (4.0, 7.0), "what came after is pulled back");
+    let second = cut.timeline.clips.iter().find(|c| c.src.as_deref() == Some("assets/talk.mp4") && c.start == 1.0).unwrap();
+    assert_eq!(second.media_start, Some(2.0), "the second piece plays from 2 s into the file");
+
+    let undone = timelines.undo(data.path(), &dir).await.expect("undo");
+    assert_eq!(spans(&undone), spans(&before), "one undo puts it all back");
+}
+
+#[tokio::test]
+#[ignore = "downloads the engine and grades a real clip"]
+async fn a_look_goes_on_and_comes_off() {
+    use crate::looks;
+
+    let data = tempfile::tempdir().unwrap();
+    let work = tempfile::tempdir().unwrap();
+    hyperframes::install(data.path()).await.expect("engine installs");
+    let created = project::create(data.path(), work.path(), "Look", Resolution::Landscape).await.expect("project");
+    let dir = std::path::PathBuf::from(&created.path);
+    std::fs::create_dir_all(dir.join("assets")).unwrap();
+    let made = std::process::Command::new("ffmpeg")
+        .args(["-y", "-v", "error", "-f", "lavfi", "-i", "testsrc=s=320x180:d=2", "-pix_fmt", "yuv420p"])
+        .arg(dir.join("assets/v.mp4"))
+        .status()
+        .unwrap();
+    assert!(made.success());
+    let index = dir.join("index.html");
+    let html = std::fs::read_to_string(&index).unwrap().replace(
+        r#"<h1 id="title""#,
+        r#"<video id="v" class="clip" src="assets/v.mp4" data-start="0" data-duration="2" data-track-index="1" muted></video>
+      <h1 id="title""#,
+    );
+    std::fs::write(&index, html).unwrap();
+
+    let presets = looks::list(data.path()).await.expect("presets");
+    assert!(presets.iter().any(|look| look.id == "warm-daylight"));
+    looks::apply(data.path(), &dir, "v", Some("warm-daylight"), 0.8).await.expect("applies");
+    let graded = std::fs::read_to_string(&index).unwrap();
+    let tag = graded.split("<video").nth(1).unwrap().split('>').next().unwrap().to_owned();
+    println!("{tag}");
+    assert!(tag.contains("warm-daylight"));
+    looks::apply(data.path(), &dir, "v", None, 1.0).await.expect("clears");
+    let cleared = std::fs::read_to_string(&index).unwrap();
+    assert!(!cleared.contains("warm-daylight"));
+    assert!(looks::apply(data.path(), &dir, "nothing-here", Some("warm-daylight"), 1.0).await.is_err());
+}
+
+#[tokio::test]
+#[ignore = "searches Openverse and downloads a sound"]
+async fn a_free_sound_is_found_and_credited() {
+    use crate::openverse;
+
+    let project = tempfile::tempdir().unwrap();
+    let found = openverse::search("whoosh", true).await.expect("search answers");
+    println!("{} sounds; first {:?}", found.len(), found.first());
+    assert!(!found.is_empty());
+    let saved = openverse::download(project.path(), &found[0]).await.expect("downloads");
+    assert!(saved.starts_with("assets/sounds/"), "{saved}");
+    assert!(project.path().join(&saved).metadata().unwrap().len() > 1000);
+    let credits = std::fs::read_to_string(project.path().join("assets/sounds/CREDITS.txt")).unwrap();
+    assert!(credits.contains(&found[0].attribution));
+}
+
+/// The voices install from nothing: the app's own Python is downloaded and
+/// checked, the packages go into an environment made from it, and a sample
+/// is spoken. Uses the installed engine when there is one, to save a download.
+#[tokio::test]
+#[ignore = "downloads Python, the voice packages and (unless cached) the voice model"]
+async fn voices_install_with_the_apps_own_python() {
+    use crate::voice;
+
+    let data = tempfile::tempdir().unwrap();
+    let installed = dirs_home().join("Library/Application Support/com.riroteglobal.vision/toolchain");
+    if installed.is_dir() {
+        std::os::unix::fs::symlink(&installed, data.path().join("toolchain")).unwrap();
+    } else {
+        hyperframes::install(data.path()).await.expect("engine installs");
+    }
+    let started = std::time::Instant::now();
+    voice::install(data.path()).await.expect("voices install");
+    println!("voices installed in {:?}", started.elapsed());
+    let python = voice::python(data.path()).expect("environment");
+    let base = std::fs::canonicalize(&python).unwrap();
+    assert!(base.starts_with(std::fs::canonicalize(data.path()).unwrap()), "the environment uses the app's own Python: {base:?}");
+    for voice_id in ["am_adam", "bf_emma"] {
+        let file = voice::sample(data.path(), voice_id).await.expect("sample");
+        assert!(std::fs::metadata(&file).unwrap().len() > 10_000, "{voice_id} sample has sound");
+    }
+}
+
+fn dirs_home() -> std::path::PathBuf {
+    std::path::PathBuf::from(std::env::var("HOME").expect("HOME"))
+}
+
+/// A media file really goes to the Trash and leaves the project.
+#[test]
+#[ignore = "puts one small file in the user's Trash"]
+fn media_goes_to_the_trash() {
+    let project = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(project.path().join("assets")).unwrap();
+    let file = project.path().join("assets/rirote-vision-trash-test.png");
+    std::fs::write(&file, b"test").unwrap();
+    crate::media::trash(project.path(), "assets/rirote-vision-trash-test.png").expect("trashed");
+    assert!(!file.exists());
 }

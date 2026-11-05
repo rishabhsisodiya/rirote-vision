@@ -1,0 +1,679 @@
+/* References: the gallery on Home, the library screen and the study itself. */
+
+/* ---- Home: bringing a reference in ---- */
+
+.drop-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: var(--space-5) var(--space-4);
+  border: 1.5px dashed var(--line-strong);
+  border-radius: var(--radius-pane);
+  background: none;
+  color: var(--text-soft);
+  text-align: center;
+}
+
+.drop-zone strong {
+  color: var(--text);
+  font-size: var(--text-title);
+}
+
+.drop-zone span {
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+
+.drop-zone:hover:not(:disabled),
+.drop-zone--over {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.or-rule {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--muted);
+  font: 11px var(--font-data);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.or-rule::before,
+.or-rule::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+.reference-error {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.reference-pick {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pane);
+  background: var(--surface-raised);
+}
+
+.reference-pick__still {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 64px;
+  height: 96px;
+  overflow: hidden;
+  border-radius: var(--radius-control);
+  background: var(--stage);
+  color: var(--muted);
+}
+
+.reference-pick__still img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.reference-pick__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.reference-pick__text > span {
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+
+.reference-pick__status,
+.references__status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-small);
+}
+
+.reference-pick__status--ready,
+.references__status--ready {
+  color: var(--cue);
+}
+
+.reference-pick__status--running,
+.reference-pick__status--queued,
+.references__status--running,
+.references__status--queued {
+  color: var(--accent-text);
+}
+
+.reference-pick__status--failed,
+.references__status--failed {
+  color: var(--mark);
+}
+
+.use-reference {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.use-reference > .button {
+  align-self: flex-start;
+}
+
+/* ---- Home: the gallery ---- */
+
+.gallery {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.gallery .home__panel-head {
+  flex-wrap: wrap;
+}
+
+.gallery__search {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 220px;
+  max-width: 420px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  background: var(--stage);
+  color: var(--muted);
+}
+
+.gallery__search input {
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: none;
+  color: var(--text);
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.gallery__scroll {
+  flex: 1;
+  min-height: 0;
+  padding: 0 var(--space-4) var(--space-4);
+  overflow-y: auto;
+}
+
+.gallery__label {
+  margin: var(--space-3) 0 var(--space-2);
+  color: var(--muted);
+  font-size: var(--text-small);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.gallery__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: var(--space-4);
+}
+
+.ref-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+}
+
+.ref-card__thumb {
+  position: relative;
+  display: block;
+  aspect-ratio: 9 / 13;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pane);
+  background: var(--stage);
+}
+
+.ref-card__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* The storyboard panel number, borrowed from direction C. */
+.ref-card__thumb::after {
+  content: attr(data-panel);
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  padding: 2px 6px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font: 700 10px var(--font-data);
+}
+
+.ref-card:hover:not(:disabled) .ref-card__thumb {
+  border-color: var(--accent);
+}
+
+.ref-card[aria-pressed="true"] .ref-card__thumb {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.ref-card__source,
+.ref-card__time,
+.ref-card__state {
+  position: absolute;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: rgba(3, 8, 18, 0.72);
+  font-size: 10px;
+}
+
+.ref-card__source {
+  top: 6px;
+  left: 6px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.ref-card__time {
+  right: 6px;
+  bottom: 6px;
+  font-size: 11px;
+}
+
+.ref-card__state {
+  top: 6px;
+  right: 6px;
+  color: var(--accent-text);
+  text-transform: capitalize;
+}
+
+.ref-card__state--failed {
+  color: var(--mark);
+}
+
+.ref-card__busy {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(3, 8, 18, 0.6);
+}
+
+.ref-card__title {
+  display: -webkit-box;
+  overflow: hidden;
+  font-weight: 600;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.ref-card__meta {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: var(--text-small);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home__state--error {
+  color: var(--mark);
+}
+
+/* ---- the References screen ---- */
+
+.references {
+  overflow: hidden;
+}
+
+.references__body {
+  display: grid;
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+  gap: var(--space-4);
+  flex: 1;
+  min-height: 0;
+}
+
+.references__list {
+  overflow-y: auto;
+}
+
+.references__list-head {
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--line);
+}
+
+.references__row {
+  display: flex;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3);
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: none;
+  text-align: left;
+}
+
+.references__row:hover {
+  background: var(--surface-raised);
+}
+
+.references__row[aria-current="true"] {
+  background: var(--surface-raised);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.references__still {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 44px;
+  height: 64px;
+  overflow: hidden;
+  border-radius: var(--radius-control);
+  background: var(--stage);
+  color: var(--muted);
+}
+
+.references__still img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.references__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.references__text strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.references__text > span:not(.references__status) {
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+
+.references__detail {
+  padding: var(--space-4) var(--space-5);
+  overflow-y: auto;
+}
+
+.references__study {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: 980px;
+}
+
+.references__study-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.references__study-head h2 {
+  font: 400 var(--text-heading) / 1.05 var(--font-display);
+  letter-spacing: 0.02em;
+}
+
+.references__source {
+  margin-top: 2px;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: var(--text-small);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.references__use {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-pane);
+  background: var(--accent-soft);
+}
+
+.references__use h3,
+.blueprint h3 {
+  font-size: var(--text-title);
+}
+
+.steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.steps__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: var(--text-small);
+  text-transform: capitalize;
+}
+
+.steps__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--line-strong);
+}
+
+.steps__item--done .steps__dot {
+  background: var(--cue);
+}
+
+.steps__item--running {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.steps__item--running .steps__dot {
+  background: var(--accent);
+}
+
+.steps__item--failed {
+  border-color: var(--mark);
+  color: var(--mark);
+}
+
+.steps__item--failed .steps__dot {
+  background: var(--mark);
+}
+
+.button--danger {
+  border-color: var(--danger);
+  background: var(--danger);
+  color: #2a0606;
+}
+
+/* ---- the blueprint ---- */
+
+.blueprint {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.blueprint section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.blueprint__summary {
+  font-size: var(--text-title);
+  line-height: 1.5;
+}
+
+/* A ledger line, not a row of cards. */
+.blueprint__figures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.blueprint__figures > div {
+  flex: 1;
+  min-width: 120px;
+  padding: var(--space-3) var(--space-4) var(--space-3) 0;
+}
+
+.blueprint__figures > div + div {
+  padding-left: var(--space-4);
+  border-left: 1px solid var(--line);
+}
+
+.blueprint__figures dt {
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+
+.blueprint__figures dd {
+  margin: 2px 0 0;
+  font-size: 20px;
+}
+
+.blueprint__figures small {
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+
+.blueprint__strip {
+  display: flex;
+  gap: 2px;
+  height: 34px;
+}
+
+.blueprint__section {
+  display: flex;
+  flex-basis: 0;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  padding: 0 8px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--surface-raised);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.blueprint__section--hook {
+  background: rgba(255, 77, 94, 0.28);
+}
+
+.blueprint__section--problem {
+  background: rgba(255, 209, 102, 0.22);
+}
+
+.blueprint__section--demo {
+  background: rgba(0, 180, 216, 0.26);
+}
+
+.blueprint__section--cta {
+  background: rgba(6, 214, 160, 0.26);
+}
+
+.blueprint__role {
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.blueprint__sections li {
+  padding: 4px 0;
+  color: var(--text-soft);
+}
+
+.blueprint__sections .mono {
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+
+.blueprint__tag {
+  padding: 1px 8px;
+  border: 1px solid var(--tally);
+  border-radius: 3px;
+  color: var(--tally);
+  font: 700 11px var(--font-data);
+  text-transform: uppercase;
+}
+
+.blueprint__why,
+.blueprint__note {
+  color: var(--muted);
+}
+
+.blueprint__shots {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--space-3);
+}
+
+.shot {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: var(--text-small);
+}
+
+.shot__still {
+  position: relative;
+  display: block;
+  aspect-ratio: 9 / 13;
+  overflow: hidden;
+  border-radius: var(--radius-control);
+  background: var(--stage);
+}
+
+.shot__still img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.shot__time {
+  position: absolute;
+  left: 4px;
+  top: 4px;
+  padding: 0 5px;
+  border-radius: 3px;
+  background: rgba(3, 8, 18, 0.72);
+}
+
+.shot__kind {
+  color: var(--muted);
+}
+
+.shot__text {
+  color: var(--mark);
+}
+
+.energy--high {
+  color: var(--tally);
+}
+
+.energy--medium {
+  color: var(--accent-text);
+}
+
+.mono {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+@media (max-width: 900px) {
+  .references {
+    overflow-y: auto;
+  }
+
+  .references__body {
+    grid-template-columns: 1fr;
+  }
+}

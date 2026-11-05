@@ -123,7 +123,7 @@ The live tests download the engine, render video and run real Claude Code sessio
 | `src-tauri/resources/` | The music synth script carried inside the app |
 | `docs/` | Notes on distribution |
 
-The video engine is pinned to HyperFrames 0.8.146 in `src-tauri/src/hyperframes.rs`.
+The video engine is pinned to HyperFrames 0.9.9 in `src-tauri/src/hyperframes.rs`.
 
 ## Licence
 

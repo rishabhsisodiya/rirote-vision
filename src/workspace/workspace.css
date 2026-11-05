@@ -1,40 +1,67 @@
 .workspace {
-  /* The sizes the user set, held back so the picture always keeps room. */
-  --sidebar-width: min(var(--sidebar-size, 264px), 26vw);
+  /* The sizes the user set, held back so the picture always keeps room.
+     The layout follows HyperFrames Studio: assistant left, picture centre,
+     inspector right, timeline across the bottom. */
+  --sidebar-width: min(var(--sidebar-size, 300px), 28vw);
   --assistant-width: min(var(--assistant-size, 360px), 34vw);
+  --timeline-height: min(var(--timeline-size, 300px), 55vh);
 
   position: relative;
   display: grid;
-  grid-template-columns: var(--sidebar-width) minmax(0, 1fr) var(--assistant-width);
-  grid-template-rows: var(--titlebar-height) minmax(0, 1fr);
+  grid-template-columns: var(--assistant-width) minmax(0, 1fr) var(--sidebar-width);
+  grid-template-rows: var(--titlebar-height) minmax(0, 1fr) calc(var(--timeline-height) + var(--space-2));
   grid-template-areas:
     "titlebar titlebar titlebar"
-    "sidebar stage assistant";
+    "assistant stage sidebar"
+    "timeline timeline timeline";
   gap: 0 var(--space-2);
   height: 100%;
   padding: 0 var(--space-2) var(--space-2);
 }
 
-.workspace--no-sidebar {
-  grid-template-columns: 0 minmax(0, 1fr) var(--assistant-width);
-  column-gap: 0;
+.workspace--no-assistant {
+  grid-template-columns: 0 minmax(0, 1fr) var(--sidebar-width);
 }
 
-.workspace--no-assistant {
-  grid-template-columns: var(--sidebar-width) minmax(0, 1fr) 0;
+.workspace--no-sidebar {
+  grid-template-columns: var(--assistant-width) minmax(0, 1fr) 0;
 }
 
 .workspace--no-sidebar.workspace--no-assistant {
   grid-template-columns: 0 minmax(0, 1fr) 0;
 }
 
-.workspace--no-sidebar .stage {
-  margin-right: var(--space-2);
+.workspace--no-assistant .stage {
+  margin-left: calc(-1 * var(--space-2));
 }
 
-.workspace--no-sidebar.workspace--no-assistant .stage,
-.workspace--no-assistant .stage {
-  margin-right: 0;
+.workspace--no-sidebar .stage {
+  margin-right: calc(-1 * var(--space-2));
+}
+
+/* Full-window picture: everything but the picture and its transport steps aside. */
+.workspace--theater {
+  grid-template-columns: 0 minmax(0, 1fr) 0;
+  grid-template-rows: var(--titlebar-height) minmax(0, 1fr) 0;
+  column-gap: 0;
+}
+
+.workspace--theater .assistant,
+.workspace--theater .sidebar,
+.workspace--theater .workspace__bottom,
+.workspace--theater .divider {
+  display: none;
+}
+
+.workspace--theater .stage {
+  margin: 0;
+}
+
+.workspace__bottom {
+  grid-area: timeline;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .titlebar {
@@ -176,8 +203,8 @@
 }
 
 .stage__timeline {
-  flex: none;
-  height: min(var(--timeline-size, 320px), 62vh);
+  flex: 1;
+  min-height: 0;
 }
 
 .assistant {
@@ -230,21 +257,297 @@
 .divider--vertical {
   position: absolute;
   top: var(--titlebar-height);
-  bottom: var(--space-2);
+  bottom: calc(var(--timeline-height) + var(--space-2) * 2);
   width: var(--space-2);
   cursor: col-resize;
 }
 
-.divider--sidebar {
-  left: calc(var(--space-2) + var(--sidebar-width));
+.divider--assistant {
+  left: calc(var(--space-2) + var(--assistant-width));
 }
 
-.divider--assistant {
-  right: calc(var(--space-2) + var(--assistant-width));
+.divider--sidebar {
+  right: calc(var(--space-2) + var(--sidebar-width));
 }
 
 
 .stage > .notice {
   flex: none;
   margin-bottom: var(--space-2);
+}
+
+/* ---- the tally light: the assistant is editing ---- */
+
+.tally {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  margin-left: var(--space-2);
+  padding: 0 8px;
+  border: 1px solid var(--tally);
+  border-radius: var(--radius-control);
+  color: var(--tally);
+  font: 700 11px var(--font-data);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.tally::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--tally);
+  animation: tally-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes tally-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* ---- the inspector panel ---- */
+
+.side__tabs {
+  display: flex;
+  flex: none;
+  gap: 2px;
+  padding: 6px;
+  border-bottom: 1px solid var(--line);
+}
+
+.side__tabs button {
+  display: inline-flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 4px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--muted);
+  font-size: var(--text-small);
+  font-weight: 600;
+}
+
+.side__tabs button:hover {
+  color: var(--text);
+}
+
+.side__tabs button[aria-selected="true"] {
+  background: var(--surface-raised);
+  color: var(--text);
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+.side__badge {
+  min-width: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--mark);
+  color: var(--on-mark);
+  font: 700 10px / 16px var(--font-data);
+}
+
+.side__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.side__empty {
+  padding: var(--space-4);
+  color: var(--muted);
+}
+
+.side__tabs {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.side__tabs button {
+  flex: 1 0 auto;
+  padding: 6px 7px;
+}
+
+/* ---- review notes ---- */
+
+.notes,
+.history {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+}
+
+.notes > .button {
+  align-self: flex-start;
+}
+
+.notes__list,
+.history__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.note {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--mark);
+  border-radius: var(--radius-control);
+}
+
+.note--resolved {
+  border-left-color: var(--cue);
+  opacity: 0.7;
+}
+
+.note__time {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--mark);
+  font-size: var(--text-small);
+}
+
+.note__number {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid var(--mark);
+  border-radius: 50%;
+  font: 700 10px var(--font-data);
+}
+
+.note__text {
+  white-space: pre-wrap;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* Grease-pencil marks on the picture, borrowed from direction B. */
+.notes-layer {
+  position: absolute;
+  inset: var(--space-3);
+  display: grid;
+  place-items: center;
+  container-type: size;
+  pointer-events: none;
+}
+
+.notes-layer--placing .notes-layer__frame {
+  outline: 2px dashed var(--mark);
+  cursor: crosshair;
+  pointer-events: auto;
+}
+
+.pencil {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 24px;
+  margin: -12px 0 0 -15px;
+  border: 2.5px solid var(--mark);
+  border-radius: 50%;
+  color: var(--mark);
+  font: 700 12px var(--font-data);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  transform: rotate(-8deg);
+  pointer-events: auto;
+}
+
+.note-draft {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 240px;
+  padding: var(--space-2);
+  border: 1px solid var(--mark);
+  border-radius: var(--radius-pane);
+  background: var(--surface);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  pointer-events: auto;
+}
+
+.note-draft .pencil--draft {
+  margin: -16px 0 0 -18px;
+}
+
+.note-draft textarea {
+  padding: 6px 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  background: var(--stage);
+  color: var(--text);
+  resize: vertical;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* ---- history ---- */
+
+.history__entry {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.history__entry--undone {
+  opacity: 0.5;
+}
+
+.history__who {
+  flex: none;
+  width: 30px;
+  padding: 2px 0;
+  border-radius: 3px;
+  font: 700 10px var(--font-data);
+  text-align: center;
+}
+
+.history__who--ai {
+  border: 1px solid var(--tally);
+  color: var(--tally);
+}
+
+.history__who--you {
+  border: 1px solid var(--line-strong);
+  color: var(--muted);
+}
+
+.history__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.history__text strong {
+  overflow: hidden;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history__text span {
+  color: var(--muted);
+  font-size: var(--text-small);
 }

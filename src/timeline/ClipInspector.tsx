@@ -58,6 +58,18 @@ export function ClipInspector({ clip, duration, freeTrack, disabled, onEdit }: C
           onCommit={(percent) => onEdit({ type: "setVolume", clip: clip.ref, volume: percent / 100 })}
         />
       )}
+      {clip.rate === null ? null : (
+        <NumberField
+          label="Speed"
+          unit="×"
+          value={clip.rate}
+          min={0.25}
+          max={4}
+          step={0.05}
+          disabled={disabled}
+          onCommit={(rate) => onEdit({ type: "setRate", clip: clip.ref, rate })}
+        />
+      )}
     </div>
   );
 }

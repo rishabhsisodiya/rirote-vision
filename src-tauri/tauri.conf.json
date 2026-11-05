@@ -12,8 +12,18 @@
   "app": {
     "withGlobalTauri": false,
     "security": {
-      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: http://127.0.0.1:*; frame-src http://127.0.0.1:*; connect-src 'self' ipc: http://ipc.localhost",
-      "devCsp": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: http://127.0.0.1:*; frame-src http://127.0.0.1:*; connect-src 'self' ipc: http://ipc.localhost ws://localhost:1430 http://localhost:1430"
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: http://127.0.0.1:* asset: http://asset.localhost; media-src 'self' blob: asset: http://asset.localhost; frame-src http://127.0.0.1:*; connect-src 'self' ipc: http://ipc.localhost",
+      "devCsp": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: http://127.0.0.1:* asset: http://asset.localhost; media-src 'self' blob: asset: http://asset.localhost; frame-src http://127.0.0.1:*; connect-src 'self' ipc: http://ipc.localhost ws://localhost:1430 http://localhost:1430",
+      "assetProtocol": {
+        "enable": true,
+        "scope": [
+          "$APPDATA/references/**",
+          "$APPDATA/reference-search/thumbs/**",
+          "$APPDATA/media-cache/**",
+          "$APPDATA/brand-kits/**",
+          "$APPDATA/voice-samples/**"
+        ]
+      }
     },
     "windows": [
       {
@@ -34,11 +44,20 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["app"],
-    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns"],
-    "copyright": "© 2026 Rishabh Sisodiya (Rirote Global). MIT License.",
+    "targets": [
+      "app"
+    ],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns"
+    ],
+    "copyright": "\u00a9 2026 Rishabh Sisodiya (Rirote Global). MIT License.",
     "category": "Video",
     "shortDescription": "AI video studio built on HyperFrames",
-    "macOS": { "minimumSystemVersion": "13.0" }
+    "macOS": {
+      "minimumSystemVersion": "13.0"
+    }
   }
 }

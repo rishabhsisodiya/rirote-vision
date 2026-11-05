@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { clamp } from "../lib/format";
 import { logToApp } from "../lib/ipc";
+import { playSoundsOnce } from "./singleAudio";
 
 /** Arrow keys step by one frame at this rate. */
 const STEP_FPS = 30;
@@ -26,6 +27,8 @@ export interface Playback {
   looping: boolean;
   /** Playback speed, 1 being real time. */
   rate: number;
+  /** Preview loudness, 0 to 1. Exports are not affected. */
+  volume: number;
   /** Why the composition could not be shown, if it could not. */
   error: string | null;
 }
@@ -38,6 +41,7 @@ const IDLE: Playback = {
   muted: false,
   looping: false,
   rate: 1,
+  volume: 1,
   error: null,
 };
 
@@ -64,6 +68,7 @@ export function usePlayer(src: string | null, revision: string) {
   const sought = useRef({ time: 0, until: 0 });
 
   const attach = useCallback((player: HyperframesPlayer | null) => {
+    if (player) playSoundsOnce(player);
     element.current = player;
     setMounted(player);
   }, []);
@@ -225,6 +230,15 @@ export function usePlayer(src: string | null, revision: string) {
     [patch],
   );
 
+  const setVolume = useCallback(
+    (volume: number) => {
+      const level = Math.min(1, Math.max(0, volume));
+      if (element.current) element.current.volume = level;
+      patch({ volume: level });
+    },
+    [patch],
+  );
+
   const setLooping = useCallback(
     (looping: boolean) => {
       if (element.current) element.current.loop = looping;
@@ -253,7 +267,7 @@ export function usePlayer(src: string | null, revision: string) {
     [setRate],
   );
 
-  return { attach, source, playback, seek, toggle, step, setMuted, setLooping, setRate, shiftRate };
+  return { attach, source, playback, seek, toggle, step, setMuted, setVolume, setLooping, setRate, shiftRate };
 }
 
 export type PlayerControls = ReturnType<typeof usePlayer>;

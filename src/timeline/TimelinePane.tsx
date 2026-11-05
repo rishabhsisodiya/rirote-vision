@@ -8,10 +8,10 @@ import type { PlayerControls } from "../preview/usePlayer";
 import { Button } from "../ui/Button";
 import { Notice } from "../ui/Notice";
 import { Spinner } from "../ui/Spinner";
-import { ClipInspector } from "./ClipInspector";
-import { buildLanes, clampScale, editPoints, fitScale, MIN_CLIP, neighbourPoint, newTrack } from "./model";
+import { buildLanes, clampScale, editPoints, fitScale, MIN_CLIP, neighbourPoint } from "./model";
 import { Playhead } from "./Playhead";
 import { TimelineLanes } from "./TimelineLanes";
+import type { MediaVisual } from "./useMediaVisuals";
 import { TimelineRuler } from "./TimelineRuler";
 import { TimelineToolbar } from "./TimelineToolbar";
 import type { TimelineControls } from "./useTimeline";
@@ -44,11 +44,17 @@ interface TimelinePaneProps {
   /** The assistant is changing the project; hand edits wait until it is done. */
   assistantBusy: boolean;
   onCheckSetup: () => void;
+  /** False while the editor is hidden behind another screen. */
+  active: boolean;
+  visuals: Map<string, MediaVisual>;
+  live: Set<string>;
+  onAdd: () => void;
+  lead?: React.ReactNode;
 }
 
 /** The project's tracks and clips, with the tools that edit them. */
 export function TimelinePane(props: TimelinePaneProps) {
-  const { timeline, player, selected, onSelect: setSelected, onCheckSetup } = props;
+  const { timeline, player, selected, onSelect: setSelected, onCheckSetup, active } = props;
   const { view, notice } = timeline;
   const busy = timeline.busy || props.assistantBusy;
   const { currentTime, playing } = player.playback;
@@ -131,7 +137,7 @@ export function TimelinePane(props: TimelinePaneProps) {
   );
 
   useMenu((command) => {
-    if (!ready || typing()) return;
+    if (!active || !ready || typing()) return;
     if (command === "edit.undo" && ready.canUndo && !busy) void undo();
     if (command === "edit.redo" && ready.canRedo && !busy) void redo();
     if (command === "clip.split") split();
@@ -146,6 +152,7 @@ export function TimelinePane(props: TimelinePaneProps) {
   );
 
   useEffect(() => {
+    if (!active) return;
     const onKey = (event: KeyboardEvent) => {
       if (typing()) return;
       if (event.metaKey && !event.altKey && !event.ctrlKey) {
@@ -172,7 +179,7 @@ export function TimelinePane(props: TimelinePaneProps) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [remove, nudge, split, seek, zoomBy, points, setSelected]);
+  }, [active, remove, nudge, split, seek, zoomBy, points, setSelected]);
 
   if (view.status === "loading") {
     return (
@@ -217,16 +224,9 @@ export function TimelinePane(props: TimelinePaneProps) {
         onDelete={remove}
         onZoom={zoomBy}
         onFit={() => setZoom(null)}
+        onAdd={props.onAdd}
+        lead={props.lead}
       />
-      {selectedClip?.editable ? (
-        <ClipInspector
-          clip={selectedClip}
-          duration={duration}
-          freeTrack={newTrack(view.timeline.clips)}
-          disabled={busy}
-          onEdit={edit}
-        />
-      ) : null}
       {notice ? <Notice message={notice} onDismiss={timeline.dismissNotice} /> : null}
 
       {lanes.length === 0 ? (
@@ -251,6 +251,8 @@ export function TimelinePane(props: TimelinePaneProps) {
               onSelect={setSelected}
               onSeek={seek}
               onEdit={edit}
+              visuals={props.visuals}
+              live={props.live}
             />
             <Playhead
               time={currentTime}

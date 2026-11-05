@@ -30,6 +30,8 @@ const clip = (id: string, kind: string, track: number, start: number, end: numbe
   end,
   src: null,
   volume: kind === "audio" ? 1 : null,
+  rate: kind === "audio" ? 1 : null,
+  mediaStart: kind === "audio" ? 0 : null,
   media: kind === "audio",
   editable: true,
 });

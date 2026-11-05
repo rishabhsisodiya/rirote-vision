@@ -71,8 +71,14 @@ impl Engine for ClaudeCode {
         if let Some(session) = turn.resume {
             command.args(["--resume", session]);
         }
-        if let Some(model) = &self.model {
+        // The model chosen in Settings wins over the engine's own default.
+        if !turn.model.is_empty() {
+            command.args(["--model", turn.model]);
+        } else if let Some(model) = &self.model {
             command.args(["--model", model]);
+        }
+        if !turn.effort.is_empty() {
+            command.args(["--effort", turn.effort]);
         }
         Ok(command)
     }
@@ -113,7 +119,7 @@ impl Engine for ClaudeCode {
                     Some("tool_use") => Some(Signal::Tool {
                         id: text(&block["id"])?,
                         tool: text(&block["name"])?,
-                        detail: tool_detail(&block["input"]),
+                        detail: tool_step(block["name"].as_str().unwrap_or(""), &block["input"]),
                     }),
                     _ => None,
                 })
@@ -255,6 +261,23 @@ fn suggested_rule(suggestions: &Value) -> Option<Rule> {
         })
 }
 
+/// What the chat shows for a step: plain words, never the command itself.
+/// A shell command is shown by the description Claude Code writes for it,
+/// a file by its name alone.
+fn tool_step(tool: &str, input: &Value) -> String {
+    let said = |key: &str| input[key].as_str().map(str::trim).filter(|text| !text.is_empty());
+    match tool {
+        "Bash" => said("description").unwrap_or("Working in the project").to_owned(),
+        "Read" | "Write" | "Edit" | "MultiEdit" | "NotebookEdit" => ["file_path", "notebook_path"]
+            .iter()
+            .find_map(|key| said(key))
+            .map(|path| std::path::Path::new(path).file_name().map_or(path.to_owned(), |name| name.to_string_lossy().into_owned()))
+            .unwrap_or_default(),
+        "Grep" | "Glob" => said("pattern").unwrap_or("").to_owned(),
+        _ => tool_detail(input),
+    }
+}
+
 /// A tool call described by the most specific thing it carries.
 fn tool_detail(input: &Value) -> String {
     ["command", "file_path", "notebook_path", "path", "pattern", "url", "query", "skill", "description"]
@@ -335,9 +358,19 @@ mod tests {
             read(&whole.replace('\n', "")),
             [
                 Signal::Text("Done.".into()),
-                Signal::Tool { id: "t1".into(), tool: "Bash".into(), detail: "ls".into() }
+                Signal::Tool { id: "t1".into(), tool: "Bash".into(), detail: "List".into() }
             ]
         );
+    }
+
+    #[test]
+    fn steps_are_shown_in_plain_words_not_commands_or_paths() {
+        let step = |tool: &str, input: Value| tool_step(tool, &input);
+        assert_eq!(step("Bash", json!({ "command": "cd \"/Users/me/x\" && cat a", "description": "Read the brand text" })), "Read the brand text");
+        assert_eq!(step("Bash", json!({ "command": "rm -rf build" })), "Working in the project");
+        assert_eq!(step("Edit", json!({ "file_path": "/Users/me/Movies/reel/compositions/hook.html" })), "hook.html");
+        assert_eq!(step("Grep", json!({ "pattern": "audio", "path": "/Users/me/Movies/reel" })), "audio");
+        assert_eq!(step("Skill", json!({ "skill": "media-use" })), "media-use");
     }
 
     #[test]

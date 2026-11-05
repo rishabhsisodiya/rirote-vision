@@ -21,6 +21,11 @@ pub fn allowed(request: &PermissionRequest, project: &Path, rules: &[Rule]) -> b
     inside_project(request, project) || rules.iter().any(|rule| covers(rule, request))
 }
 
+/// A shell command that only reads files inside the project; see `readonly.rs`.
+pub fn only_reads(request: &PermissionRequest, project: &Path) -> bool {
+    request.tool == "Bash" && super::readonly::only_reads(command_of(&request.input), project)
+}
+
 fn inside_project(request: &PermissionRequest, project: &Path) -> bool {
     if !FILE_TOOLS.contains(&request.tool.as_str()) {
         return false;
@@ -33,7 +38,7 @@ fn inside_project(request: &PermissionRequest, project: &Path) -> bool {
 
 /// True when `path` names something in `folder`, judged by the names alone:
 /// `..` is followed, links are not.
-fn is_within(path: &Path, folder: &Path) -> bool {
+pub(super) fn is_within(path: &Path, folder: &Path) -> bool {
     if !path.is_absolute() {
         return false;
     }

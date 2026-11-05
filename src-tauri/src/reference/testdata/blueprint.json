@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0",
+  "referenceId": "youtube-abc",
+  "source": "https://www.youtube.com/shorts/abc",
+  "language": "en",
+  "model": "claude-x",
+  "createdAt": 0,
+  "summary": "A fast talking-head promo with product cutaways.",
+  "hook": {"window_seconds": 3.0, "hook_type": "bold-claim", "analysis": "A big claim in the first second.", "spoken": "A claim about speed", "visual": "Presenter close to camera"},
+  "structure": [
+    {"role": "hook", "start": 0.0, "end": 3.0, "summary": "Bold claim."},
+    {"role": "cta", "start": 3.0, "end": 8.0, "summary": "Visit the site."}
+  ],
+  "pacing": {"totalDuration": 8.0, "shotCount": 2, "avgShotLength": 4.0, "minShotLength": 3.0, "maxShotLength": 5.0, "cutsPer10s": 1.3},
+  "music": {"mood": "upbeat", "tempo": "fast", "notes": "inferred"},
+  "captionStyle": {"present": true, "position": "bottom", "style": "bold white", "animation": null},
+  "shots": [
+    {"index": 0, "shot_type": "close-up", "camera_motion": "static", "subject_pose": "facing camera", "subject_action": "makes a claim", "on_screen_text": null, "product_visible": false, "emotion": "excited", "energy": "high", "start": 0.0, "end": 3.0, "duration": 3.0, "keyframe": "keyframes/shot_000.jpg"},
+    {"index": 1, "shot_type": "product", "camera_motion": "zoom-in", "subject_pose": "none", "subject_action": "product on a desk", "on_screen_text": "the site address", "product_visible": true, "emotion": "calm", "energy": "medium", "start": 3.0, "end": 8.0, "duration": 5.0, "keyframe": "keyframes/shot_001.jpg"}
+  ]
+}

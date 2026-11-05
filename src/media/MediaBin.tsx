@@ -30,12 +30,16 @@ interface MediaBinProps {
   onVoiceover: () => void;
   onMusic: () => void;
   onPlace: (item: MediaItem) => void;
+  /** Opens the free sound search. */
+  onSounds: () => void;
 }
 
 /** The project's media files, the jobs that make more, and what to do with each. */
 export function MediaBin(props: MediaBinProps) {
   const { media, jobs, filesUrl } = props;
   const [selected, setSelected] = useState<string | null>(null);
+  const [filter, setFilter] = useState("");
+  const [kind, setKind] = useState<MediaItem["kind"] | "all">("all");
 
   const start = async (item: MediaItem, type: "transcribe" | "removeBackground") => {
     const refused = await jobs.start({ type, source: item.path });
@@ -48,10 +52,24 @@ export function MediaBin(props: MediaBinProps) {
         <h2 className="pane__heading">Media</h2>
         <IconButton icon="mic" label="New voiceover" onClick={props.onVoiceover} />
         <IconButton icon="music" label="New music bed" onClick={props.onMusic} />
+        <IconButton icon="search" label="Find free sounds and music" onClick={props.onSounds} />
         <IconButton icon="plus" label="Import media" disabled={media.importing} onClick={props.onImport} />
       </header>
 
       {media.notice ? <Notice message={media.notice} onDismiss={media.dismissNotice} /> : null}
+
+      {media.state.status === "ready" && media.state.items.length > 4 ? (
+        <div className="media__filter">
+          <input type="search" value={filter} placeholder="Filter files" aria-label="Filter files" onChange={(event) => setFilter(event.target.value)} />
+          <select className="transport__select" value={kind} aria-label="Kind" onChange={(event) => setKind(event.target.value as typeof kind)}>
+            <option value="all">All</option>
+            <option value="video">Video</option>
+            <option value="audio">Sound</option>
+            <option value="image">Images</option>
+            <option value="captions">Captions</option>
+          </select>
+        </div>
+      ) : null}
 
       <div className="media__list">
         {media.state.status === "loading" ? (
@@ -69,7 +87,9 @@ export function MediaBin(props: MediaBinProps) {
           </p>
         ) : (
           <ul>
-            {media.state.items.map((item) => (
+            {media.state.items
+              .filter((item) => (kind === "all" || item.kind === kind) && item.name.toLowerCase().includes(filter.trim().toLowerCase()))
+              .map((item) => (
               <MediaRow
                 key={item.path}
                 item={item}
@@ -81,6 +101,10 @@ export function MediaBin(props: MediaBinProps) {
                 onTranscribe={() => void start(item, "transcribe")}
                 onCutOut={() => void start(item, "removeBackground")}
                 onReveal={() => media.reveal(item.path)}
+                usedBy={() => media.usedBy(item.path)}
+                onTrash={async () => {
+                  if (await media.trash(item.path)) setSelected(null);
+                }}
               />
             ))}
           </ul>
@@ -108,7 +132,13 @@ interface MediaRowProps {
   onTranscribe: () => void;
   onCutOut: () => void;
   onReveal: () => void;
+  /** The composition files that use this file. */
+  usedBy: () => Promise<string[]>;
+  onTrash: () => Promise<void>;
 }
+
+/** Deleting asks once; when the video uses the file, it says where. */
+type Confirm = { status: "idle" } | { status: "checking" } | { status: "asking"; usedIn: string[] } | { status: "deleting" };
 
 function MediaRow({ item, open, filesUrl, assistantBusy, ...actions }: MediaRowProps) {
   /** The picture could not be loaded; the kind's icon stands in. */
@@ -118,6 +148,22 @@ function MediaRow({ item, open, filesUrl, assistantBusy, ...actions }: MediaRowP
       ? `${filesUrl}/${item.path.split("/").map(encodeURIComponent).join("/")}`
       : null;
   const facts = [item.duration === null ? null : formatDuration(item.duration), formatBytes(item.bytes)];
+  const [confirm, setConfirm] = useState<Confirm>({ status: "idle" });
+
+  const askToDelete = async () => {
+    setConfirm({ status: "checking" });
+    try {
+      setConfirm({ status: "asking", usedIn: await actions.usedBy() });
+    } catch {
+      // Not knowing where it is used is no reason to refuse; ask plainly.
+      setConfirm({ status: "asking", usedIn: [] });
+    }
+  };
+  const remove = async () => {
+    setConfirm({ status: "deleting" });
+    await actions.onTrash();
+    setConfirm({ status: "idle" });
+  };
   return (
     <li className={`media-row ${open ? "media-row--open" : ""}`}>
       <button type="button" className="media-row__main" aria-expanded={open} title={item.path} onClick={actions.onToggle}>
@@ -154,6 +200,32 @@ function MediaRow({ item, open, filesUrl, assistantBusy, ...actions }: MediaRowP
           <Button variant="ghost" icon="reveal" onClick={actions.onReveal}>
             Show in Finder
           </Button>
+          {confirm.status === "idle" || confirm.status === "checking" ? (
+            <Button variant="ghost" icon="trash" busy={confirm.status === "checking"} onClick={() => void askToDelete()}>
+              Delete
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+      {open && (confirm.status === "asking" || confirm.status === "deleting") ? (
+        <div className="media-row__confirm" role="alertdialog" aria-label={`Delete ${item.name}?`}>
+          <p>
+            {confirm.status === "asking" && confirm.usedIn.length > 0 ? (
+              <>
+                <strong>The video uses this file</strong> (in {confirm.usedIn.join(", ")}). Deleting it leaves a missing clip there.
+              </>
+            ) : (
+              <>Move {item.name} to the Trash? You can put it back from the Trash.</>
+            )}
+          </p>
+          <div className="media-row__actions">
+            <Button disabled={confirm.status === "deleting"} onClick={() => setConfirm({ status: "idle" })}>
+              Cancel
+            </Button>
+            <Button variant="primary" icon="trash" busy={confirm.status === "deleting"} onClick={() => void remove()}>
+              {confirm.status === "asking" && confirm.usedIn.length > 0 ? "Move to Trash Anyway" : "Move to Trash"}
+            </Button>
+          </div>
         </div>
       ) : null}
     </li>

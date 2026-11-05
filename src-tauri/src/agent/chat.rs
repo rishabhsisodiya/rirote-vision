@@ -49,6 +49,11 @@ pub enum Trust {
     Full,
 }
 
+impl Trust {
+    /// The level of a project where none was chosen: nothing is asked.
+    pub const DEFAULT: Trust = Trust::Full;
+}
+
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Chat {

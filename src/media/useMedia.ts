@@ -59,8 +59,27 @@ export function useMedia(projectPath: string, revision: string | null) {
     [projectPath],
   );
 
+  /** The composition files that use `file`; empty when nothing does. */
+  const usedBy = useCallback((file: string) => api.mediaUsedBy(projectPath, file), [projectPath]);
+
+  /** Moves `file` to the Trash and reads the list again. Resolves to whether it worked. */
+  const trash = useCallback(
+    async (file: string): Promise<boolean> => {
+      setNotice(null);
+      try {
+        await api.trashMedia(projectPath, file);
+        await reload();
+        return true;
+      } catch (cause) {
+        setNotice(errorMessage(cause));
+        return false;
+      }
+    },
+    [projectPath, reload],
+  );
+
   const dismissNotice = useCallback(() => setNotice(null), []);
-  return { state, importing, notice, setNotice, dismissNotice, reload, importFiles, reveal };
+  return { state, importing, notice, setNotice, dismissNotice, reload, importFiles, reveal, usedBy, trash };
 }
 
 export type MediaControls = ReturnType<typeof useMedia>;

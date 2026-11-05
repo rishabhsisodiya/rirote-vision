@@ -18,6 +18,7 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
     let app_menu = SubmenuBuilder::new(app, "RIROTE VISION")
         .about(None)
         .separator()
+        .item(&item("app.settings", "Settings…", Some("CmdOrCtrl+,"))?)
         .item(&item("setup.check", "Check Setup…", None)?)
         .separator()
         .services()
@@ -59,6 +60,10 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
         .build()?;
 
     let view = SubmenuBuilder::new(app, "View")
+        .item(&item("view.palette", "Search Projects and Commands…", Some("CmdOrCtrl+K"))?)
+        .item(&item("view.home", "Home", Some("CmdOrCtrl+1"))?)
+        .item(&item("view.editor", "Editor", Some("CmdOrCtrl+2"))?)
+        .separator()
         .item(&item("view.sidebar", "Show or Hide Project Sidebar", Some("CmdOrCtrl+0"))?)
         .item(&item("view.assistant", "Show or Hide Assistant", Some("CmdOrCtrl+Alt+0"))?)
         .separator()

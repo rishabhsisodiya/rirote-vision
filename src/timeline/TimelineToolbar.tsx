@@ -1,6 +1,8 @@
 import { formatDuration } from "../lib/format";
 import type { Clip } from "../lib/types";
-import { IconButton } from "../ui/Button";
+import type { ReactNode } from "react";
+
+import { Button, IconButton } from "../ui/Button";
 import { Spinner } from "../ui/Spinner";
 import { clipName } from "./model";
 
@@ -19,6 +21,10 @@ interface TimelineToolbarProps {
   onDelete: () => void;
   onZoom: (factor: number) => void;
   onFit: () => void;
+  /** Opens the catalogue: transitions, titles, overlays and more. */
+  onAdd: () => void;
+  /** Shown in place of the title: the Timeline / Transcript switch. */
+  lead?: ReactNode;
 }
 
 export function TimelineToolbar(props: TimelineToolbarProps) {
@@ -26,7 +32,7 @@ export function TimelineToolbar(props: TimelineToolbarProps) {
   const editable = !!selected?.editable && !busy;
   return (
     <div className="timeline__toolbar" role="toolbar" aria-label="Timeline">
-      <h2 className="timeline__title">Timeline</h2>
+      {props.lead ?? <h2 className="timeline__title">Timeline</h2>}
       <div className="timeline__group">
         <IconButton icon="undo" label="Undo (⌘Z)" disabled={!props.canUndo || busy} onClick={props.onUndo} />
         <IconButton icon="redo" label="Redo (⇧⌘Z)" disabled={!props.canRedo || busy} onClick={props.onRedo} />
@@ -40,6 +46,17 @@ export function TimelineToolbar(props: TimelineToolbarProps) {
         />
         <IconButton icon="duplicate" label="Duplicate (⌘D)" disabled={!editable} onClick={props.onDuplicate} />
         <IconButton icon="trash" label="Delete (⌫)" disabled={!editable} onClick={props.onDelete} />
+      </div>
+      <div className="timeline__group">
+        <Button
+          variant="ghost"
+          icon="plus"
+          disabled={props.assistantBusy}
+          title={selected ? "Add a transition, title or overlay after the selected clip" : "Add a transition, title or overlay at the playhead"}
+          onClick={props.onAdd}
+        >
+          {selected ? "Add After" : "Add"}
+        </Button>
       </div>
 
       <p className="timeline__selection" aria-live="polite">
