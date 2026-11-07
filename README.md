@@ -4,7 +4,7 @@ An AI video studio for macOS. Describe the video in chat, or start from a script
 
 It is built on [HyperFrames](https://github.com/heygen-com/hyperframes), which renders video from HTML compositions. The assistant uses the Claude Code you already have signed in, so the app stores no API key. Everything else it uses is free: voices, music, captions and cut-outs run on your Mac, and sound effects come from openly licensed libraries.
 
-**Status:** version 0.1.0, an early personal project. It has only been run on one Apple Silicon Mac (macOS 27), there are no signed downloads yet, and it has never been installed on a clean machine. Expect rough edges, and please open an issue for what you hit.
+**Status:** version 0.1.0, an early personal project. It has only been run on one Apple Silicon Mac (macOS 27). The download is not signed by Apple, it has never been installed on a clean machine, and the Intel build is untested. Expect rough edges, and please open an issue for what you hit.
 
 This project is not affiliated with or endorsed by HeyGen (HyperFrames) or Anthropic (Claude). You need your own Claude plan, and using it through this app is subject to Anthropic's terms.
 
@@ -75,9 +75,17 @@ The `brew` commands need [Homebrew](https://brew.sh). You don't need Python: voi
 
 ## Install
 
-### Option A: build it yourself (recommended)
+### Option A: download it (recommended)
 
-There are no signed downloads yet, so building from source is the reliable way in. You also need [Rust](https://rustup.rs) and the Xcode command line tools (`xcode-select --install`).
+1. Download the latest **RIROTE-VISION-…-mac.dmg** from [Releases](https://github.com/rishabhsisodiya/rirote-vision/releases/latest). One file works on both Apple Silicon and Intel Macs.
+2. Open it and drag **RIROTE VISION** into **Applications**.
+3. Open the app. The first time, macOS blocks it, because the app is not signed by an Apple developer account. Go to **System Settings > Privacy & Security**, scroll down to the message about RIROTE VISION, click **Open Anyway** and confirm. You only do this once.
+
+Then follow **First run** below. You don't need npm, Rust or the source code.
+
+### Option B: build it yourself
+
+Building from source avoids the macOS warning. You also need [Rust](https://rustup.rs) and the Xcode command line tools (`xcode-select --install`).
 
 ```bash
 git clone https://github.com/rishabhsisodiya/rirote-vision.git
@@ -94,20 +102,13 @@ If the build says `cargo` cannot be found, load Rust into the terminal and run i
 source "$HOME/.cargo/env" && npm run install-app
 ```
 
-### Option B: a build someone sent you
+### If macOS says the app is damaged
 
-If a teammate sends you the app as a zip (Apple Silicon only):
+That message sometimes appears instead of **Open Anyway** for unsigned apps. Clear the block once in Terminal, then open the app again:
 
-1. Unzip the file and drag **RIROTE VISION** into your Applications folder.
-2. macOS will refuse to open it, because the app is not signed by an Apple developer account. Only do this for a build from someone you trust. Clear the block once, in Terminal:
-
-   ```bash
-   xattr -dr com.apple.quarantine "/Applications/RIROTE VISION.app"
-   ```
-
-3. Open the app.
-
-If you would rather not run that command, try opening the app once, then go to **System Settings > Privacy & Security** and click **Open Anyway**.
+```bash
+xattr -dr com.apple.quarantine "/Applications/RIROTE VISION.app"
+```
 
 ## First run
 
@@ -142,7 +143,7 @@ If you would rather not run that command, try opening the app once, then go to *
 
 | Problem | Try |
 |---|---|
-| "The app is damaged" or it will not open | Run the `xattr` command in Install, Option B, or build from source |
+| "The app is damaged" or it will not open | Run the `xattr` command under Install, or build from source |
 | A required row in Check Setup stays Missing | Install it, then quit and reopen the app so it sees the new tool |
 | The assistant says it needs video skills | Check Setup, then Install Video Skills |
 | Voiceover or music fails | Check Setup, then Install Voiceover and Music |
@@ -161,7 +162,10 @@ cargo test -p rirote-vision                             # Rust unit tests
 cargo test -p rirote-vision -- --ignored --nocapture    # live tests
 npm run app            # build the app bundle
 npm run install-app    # build and copy to /Applications (quit the app first)
+npm run release        # the disk image for Apple Silicon and Intel
 ```
+
+To publish a release, set the version in `src-tauri/tauri.conf.json`, commit, then push a matching tag such as `v0.1.0`. GitHub builds the disk image and attaches it to the release (`.github/workflows/release.yml`).
 
 The live tests download the engine, render video and run real Claude Code sessions on your plan, so they are not run by default.
 

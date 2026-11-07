@@ -2,6 +2,8 @@
 
 **As of 11 October 2026, version 0.1.0: not yet.** It runs on the Mac it was built on because that Mac already has everything it depends on. Someone else can get it working today, but only with manual setup and a macOS security warning to clear.
 
+**Update, 7 November 2026:** releases now ship a disk image for Apple Silicon and Intel, built by GitHub (`.github/workflows/release.yml`) when a version tag is pushed. It is signed ad hoc, so people clear the macOS warning once with **Open Anyway**. Signing with a paid Apple Developer account was deliberately left for later. The setup gaps below (Node.js, FFmpeg, Git, Claude Code) are still open. Python is no longer one of them: the app downloads its own.
+
 This note records what stands between the current build and a simple "download and run", and the three realistic ways forward.
 
 ## What stops a simple install

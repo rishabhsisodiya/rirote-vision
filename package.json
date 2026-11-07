@@ -11,6 +11,7 @@
     "icons": "tauri icon src-tauri/app-icon.png",
     "tauri": "tauri",
     "app": "tauri build && codesign --force --deep -s - \"target/release/bundle/macos/RIROTE VISION.app\"",
+    "release": "tauri build --target universal-apple-darwin --bundles app,dmg",
     "test": "node --test \"src/**/*.test.ts\"",
     "install-app": "npm run app && ditto \"target/release/bundle/macos/RIROTE VISION.app\" \"/Applications/RIROTE VISION.app\""
   },

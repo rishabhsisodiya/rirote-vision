@@ -56,7 +56,8 @@
     "category": "Video",
     "shortDescription": "AI video studio built on HyperFrames",
     "macOS": {
-      "minimumSystemVersion": "13.0"
+      "minimumSystemVersion": "13.0",
+      "signingIdentity": "-"
     }
   }
 }
