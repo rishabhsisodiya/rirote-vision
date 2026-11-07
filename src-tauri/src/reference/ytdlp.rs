@@ -1,4 +1,4 @@
-//! yt-dlp: downloads a reference from a link, and searches for references.
+//! yt-dlp: downloads a reference from a link.
 //! The official macOS build is fetched from its GitHub releases and checked
 //! against the checksums published with it.
 
