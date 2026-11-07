@@ -54,6 +54,9 @@ jobs:
           name="RIROTE-VISION-$version-mac.dmg"
           cp target/universal-apple-darwin/release/bundle/dmg/*.dmg "$name"
           shasum -a 256 "$name" > "$name.sha256"
+          # Same file under a fixed name, so .../releases/latest/download/RIROTE-VISION-mac.dmg
+          # always downloads the newest version (the website's Download button uses it).
+          cp "$name" RIROTE-VISION-mac.dmg
           echo "name=$name" >> "$GITHUB_OUTPUT"
 
       - name: Attach it to the release
@@ -63,7 +66,7 @@ jobs:
         run: |
           gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || \
             gh release create "$GITHUB_REF_NAME" --title "RIROTE VISION $GITHUB_REF_NAME" --notes-file .github/release-notes.md
-          gh release upload "$GITHUB_REF_NAME" "${{ steps.dmg.outputs.name }}" "${{ steps.dmg.outputs.name }}.sha256" --clobber
+          gh release upload "$GITHUB_REF_NAME" "${{ steps.dmg.outputs.name }}" "${{ steps.dmg.outputs.name }}.sha256" RIROTE-VISION-mac.dmg --clobber
 
       - name: Keep the build when run by hand
         if: "!startsWith(github.ref, 'refs/tags/')"
