@@ -9,6 +9,7 @@ import type { BrandColour, BrandKit } from "../lib/types";
 import { Button, IconButton } from "../ui/Button";
 import { Notice } from "../ui/Notice";
 import { Spinner } from "../ui/Spinner";
+import { KitAssets } from "./KitAssets";
 import type { BrandKitsControls } from "./useBrandKits";
 
 /** Popular Google Fonts, offered as suggestions; any family name may be typed. */
@@ -27,6 +28,7 @@ const EMPTY: BrandKit = {
   logo: null,
   tone: "",
   website: "",
+  assets: [],
   updatedAt: 0,
 };
 
@@ -38,6 +40,12 @@ export function BrandKitsScreen({ kits }: { kits: BrandKitsControls }) {
   const [chosen, setChosen] = useState<string | null>(null);
   const [draft, setDraft] = useState<BrandKit | null>(null);
   const current = list.find((kit) => kit.id === chosen) ?? null;
+
+  // Kits can be added or changed outside the app; read the folder afresh on opening.
+  const { reload } = kits;
+  useEffect(() => {
+    void reload();
+  }, [reload]);
 
   // Opening a kit edits a copy of it; a new kit starts from the room's own colours.
   useEffect(() => {
@@ -88,20 +96,33 @@ export function BrandKitsScreen({ kits }: { kits: BrandKitsControls }) {
         </aside>
         <section className="home__panel references__detail" aria-label="Kit">
           {draft ? (
-            <KitForm
-              key={draft.id || "new"}
-              kit={draft}
-              onSaved={async (saved) => {
-                await kits.reload();
-                setChosen(saved.id);
-                setDraft(saved);
-              }}
-              onDeleted={async () => {
-                await kits.reload();
-                setChosen(null);
-                setDraft(null);
-              }}
-            />
+            <div className="brands__editor">
+              <KitForm
+                key={draft.id || "new"}
+                kit={draft}
+                onSaved={async (saved) => {
+                  await kits.reload();
+                  setChosen(saved.id);
+                  setDraft(saved);
+                }}
+                onDeleted={async () => {
+                  await kits.reload();
+                  setChosen(null);
+                  setDraft(null);
+                }}
+              />
+              {draft.id ? (
+                <KitAssets
+                  kit={draft}
+                  onChanged={async (saved) => {
+                    setDraft(saved);
+                    await kits.reload();
+                  }}
+                />
+              ) : (
+                <p className="field__help">Create the kit first, then add photos and 3D avatars to it.</p>
+              )}
+            </div>
           ) : (
             <p className="home__state">Choose a kit, or make a new one.</p>
           )}

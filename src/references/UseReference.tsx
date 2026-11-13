@@ -1,10 +1,12 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 
+import { KitPicker } from "../brand/KitPicker";
+import { withKitBrief } from "../brand/useBrandKits";
 import { createNamed } from "../home/createProject";
 import { VoicePicker } from "../home/VoicePicker";
 import { projectNameFrom } from "../home/briefs";
 import { api, errorMessage } from "../lib/ipc";
-import type { ProjectSummary, Reference, Resolution } from "../lib/types";
+import type { BrandKit, ProjectSummary, Reference, Resolution } from "../lib/types";
 import { Button } from "../ui/Button";
 import { Notice } from "../ui/Notice";
 
@@ -21,15 +23,22 @@ export function shapeOf(reference: Reference): Resolution {
   return height > width ? "portrait" : "landscape";
 }
 
-/** "Make my video in this format": a request, a shape, and a new project. */
+/** "Make my video in this format": a request, a shape, a brand kit, and a new project. */
 export function UseReference({ reference, onStarted }: UseReferenceProps) {
   const [request, setRequest] = useState("");
   const [shape, setShape] = useState<Resolution>(() => shapeOf(reference));
   /** "" matches the reference, "none" is no voiceover, else a voice id. */
   const [voice, setVoice] = useState("");
+  const [kits, setKits] = useState<BrandKit[]>([]);
+  const [kit, setKit] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const ready = request.trim().length >= 8;
+
+  // The kit list is read here so this form works wherever a reference is opened.
+  useEffect(() => {
+    api.listBrandKits().then(setKits, () => setKits([]));
+  }, []);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -38,8 +47,10 @@ export function UseReference({ reference, onStarted }: UseReferenceProps) {
     setError(null);
     try {
       const brief = await api.referenceBrief(reference.id, request, voice);
+      const kitBrief = kit ? await api.brandBrief(kit) : null;
       const project = await createNamed(projectNameFrom(request), shape);
-      onStarted(project, brief);
+      if (kit) await api.setProjectBrand(project.path, kit);
+      onStarted(project, kitBrief ? withKitBrief(brief, kitBrief) : brief);
     } catch (cause) {
       setError(errorMessage(cause));
       setBusy(false);
@@ -58,6 +69,7 @@ export function UseReference({ reference, onStarted }: UseReferenceProps) {
         />
         <span className="field__help">Your own subject, in this reference's format. Nothing of the reference is copied.</span>
       </label>
+      <KitPicker kits={kits} value={kit} onChange={setKit} />
       <VoicePicker
         value={voice}
         onChange={setVoice}

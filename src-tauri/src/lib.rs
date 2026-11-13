@@ -252,6 +252,43 @@ fn brandkit_logo(state: State<'_, AppState>, id: String, file: String) -> AppRes
 }
 
 #[tauri::command]
+fn brandkit_add_asset(state: State<'_, AppState>, id: String, file: String, label: String, note: String) -> AppResult<brandkit::Kit> {
+    state.brands.add_asset(&id, Path::new(&file), &label, &note)
+}
+
+#[tauri::command]
+fn brandkit_update_asset(state: State<'_, AppState>, id: String, asset: String, label: String, note: String) -> AppResult<brandkit::Kit> {
+    state.brands.update_asset(&id, &asset, &label, &note)
+}
+
+#[tauri::command]
+fn brandkit_remove_asset(state: State<'_, AppState>, id: String, asset: String) -> AppResult<brandkit::Kit> {
+    state.brands.remove_asset(&id, &asset)
+}
+
+/// Makes a background-removed copy of a kit photo. The first run downloads
+/// the engine's cut-out model, so it may take a few minutes.
+#[tauri::command]
+async fn brandkit_cutout(state: State<'_, AppState>, id: String, asset: String) -> AppResult<brandkit::Kit> {
+    let (source, output) = state.brands.cutout_plan(&id, &asset)?;
+    let folder = output.parent().map(Path::to_path_buf).unwrap_or_else(|| state.data_dir.clone());
+    let args = ["remove-background", &source.to_string_lossy(), "-o", &output.to_string_lossy(), "--json"].map(|a| a.to_string());
+    let args: Vec<&str> = args.iter().map(String::as_str).collect();
+    let ran = hyperframes::run(&state.data_dir, &args, &folder, std::time::Duration::from_secs(15 * 60)).await;
+    let made = matches!(&ran, Ok(out) if out.status.success()) && output.is_file();
+    if !made {
+        let _ = std::fs::remove_file(&output);
+        let why = match ran {
+            Ok(out) => shell_env::failure_text(&out),
+            Err(error) => error.to_string(),
+        };
+        log::write(&state.data_dir, "brandkit", &format!("cut-out failed: {why}"));
+        return Err(error::AppError::ToolFailed(format!("The background could not be removed. {}", shell_env::first_line(&why))));
+    }
+    state.brands.add_cutout(&id, &asset, &output)
+}
+
+#[tauri::command]
 fn brandkit_delete(state: State<'_, AppState>, id: String) -> AppResult<()> {
     state.brands.delete(&id)
 }
@@ -727,6 +764,10 @@ pub fn run() {
             brandkit_list,
             brandkit_save,
             brandkit_logo,
+            brandkit_add_asset,
+            brandkit_update_asset,
+            brandkit_remove_asset,
+            brandkit_cutout,
             brandkit_delete,
             brandkit_brief,
             project_brand_get,

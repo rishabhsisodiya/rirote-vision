@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { api } from "../lib/ipc";
-import type { Settings } from "../lib/types";
+import type { BrandKit, Settings } from "../lib/types";
 
 interface SkillInfo {
   name: string;
@@ -16,8 +16,16 @@ const MODELS: { value: Settings["assistantModel"]; label: string }[] = [
 ];
 const EFFORTS: Settings["assistantEffort"][] = ["", "low", "medium", "high", "xhigh", "max"];
 
-/** Under the box: which model and effort the next turn uses, and a skill to point it at. */
-export function ComposerTools({ onSkill, disabled }: { onSkill: (name: string) => void; disabled: boolean }) {
+interface ComposerToolsProps {
+  onSkill: (name: string) => void;
+  /** Brand kits that can go with the next message. */
+  kits: BrandKit[];
+  onKit: (id: string) => void;
+  disabled: boolean;
+}
+
+/** Under the box: which model and effort the next turn uses, a skill to point it at, and a brand kit to send with it. */
+export function ComposerTools({ onSkill, kits, onKit, disabled }: ComposerToolsProps) {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [skills, setSkills] = useState<SkillInfo[]>([]);
 
@@ -76,6 +84,23 @@ export function ComposerTools({ onSkill, disabled }: { onSkill: (name: string) =
           {skills.map((skill) => (
             <option key={skill.name} value={skill.name} title={skill.description}>
               {skill.name}
+            </option>
+          ))}
+        </select>
+      ) : null}
+      {kits.length ? (
+        <select
+          className="transport__select"
+          value=""
+          disabled={disabled}
+          aria-label="Send a brand kit with the next message"
+          title="Send a brand kit (colours, fonts, logo, photos, avatars) with the next message"
+          onChange={(event) => event.target.value && onKit(event.target.value)}
+        >
+          <option value="">Brand kit…</option>
+          {kits.map((kit) => (
+            <option key={kit.id} value={kit.id}>
+              {kit.name}
             </option>
           ))}
         </select>

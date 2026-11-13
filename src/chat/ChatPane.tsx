@@ -2,10 +2,13 @@ import "./chat.css";
 
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 
+import { restyleBrief, withAttachedKit, type BrandKitsState } from "../brand/useBrandKits";
 import { formatDuration } from "../lib/format";
-import type { ApprovalAnswer, ApprovalRequest, ChatMessage, EditorContext } from "../lib/types";
+import { api, errorMessage } from "../lib/ipc";
+import type { ApprovalAnswer, ApprovalRequest, BrandKit, ChatMessage, EditorContext } from "../lib/types";
 import { Button, IconButton } from "../ui/Button";
 import { Icon } from "../ui/Icon";
+import { Notice } from "../ui/Notice";
 import { Spinner } from "../ui/Spinner";
 import { inlineRuns, toolVerb } from "./chatState";
 import { trustLabel } from "./trust";
@@ -25,12 +28,18 @@ interface ChatPaneProps {
   context: EditorContext;
   /** The name of the selected clip, for the line under the box. */
   selectedName: string | null;
+  projectPath: string;
+  kits: BrandKitsState;
 }
 
 /** The conversation with the assistant and the box that sends requests to it. */
-export function ChatPane({ chat, context, selectedName }: ChatPaneProps) {
+export function ChatPane({ chat, context, selectedName, projectPath, kits }: ChatPaneProps) {
   const { state } = chat;
   const [draft, setDraft] = useState("");
+  /** A kit picked from the Brand kit menu: it goes with the next message only. */
+  const [attached, setAttached] = useState<BrandKit | null>(null);
+  const [kitBusy, setKitBusy] = useState(false);
+  const [kitError, setKitError] = useState<string | null>(null);
   /** The level chooser is open to change a level already chosen. */
   const [changing, setChanging] = useState(false);
   /** Requests typed while a turn runs; each goes when the one before ends. */
@@ -52,12 +61,60 @@ export function ChatPane({ chat, context, selectedName }: ChatPaneProps) {
     element.style.height = `${element.scrollHeight}px`;
   }, [draft]);
 
-  const submit = () => {
-    const prompt = draft.trim();
-    if (!prompt || choosing) return;
-    setDraft("");
+  const dispatch = (prompt: string) => {
     if (state.busy || queued.length) setQueued((before) => [...before, prompt]);
     else void chat.send(prompt, context);
+  };
+
+  /** The attached kit's summary, read fresh so it lists the kit as it is now. */
+  const kitBrief = async (kit: BrandKit): Promise<string | null> => {
+    try {
+      return await api.brandBrief(kit.id);
+    } catch (cause) {
+      setKitError(errorMessage(cause));
+      return null;
+    }
+  };
+
+  const submit = async () => {
+    const typed = draft.trim();
+    if (!typed || choosing || kitBusy) return;
+    let prompt = typed;
+    if (attached) {
+      setKitBusy(true);
+      const brief = await kitBrief(attached);
+      setKitBusy(false);
+      if (brief === null) return;
+      prompt = withAttachedKit(typed, brief);
+      setAttached(null);
+    }
+    setDraft("");
+    dispatch(prompt);
+  };
+
+  // Picking a kit makes it this video's kit (its files are copied into
+  // assets/brand/) and attaches it to the next message.
+  const pickKit = async (id: string) => {
+    setKitError(null);
+    setKitBusy(true);
+    try {
+      setAttached(await api.setProjectBrand(projectPath, id));
+      box.current?.focus();
+    } catch (cause) {
+      setKitError(errorMessage(cause));
+    } finally {
+      setKitBusy(false);
+    }
+  };
+
+  const restyle = async () => {
+    if (!attached) return;
+    setKitBusy(true);
+    const brief = await kitBrief(attached);
+    setKitBusy(false);
+    if (brief === null) return;
+    setAttached(null);
+    dispatch(restyleBrief(brief));
   };
 
   // The next queued request goes as soon as the assistant is free.
@@ -74,7 +131,7 @@ export function ChatPane({ chat, context, selectedName }: ChatPaneProps) {
   const onKey = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
       event.preventDefault();
-      submit();
+      void submit();
     }
   };
 
@@ -175,9 +232,22 @@ export function ChatPane({ chat, context, selectedName }: ChatPaneProps) {
         className="composer"
         onSubmit={(event) => {
           event.preventDefault();
-          submit();
+          void submit();
         }}
       >
+        {attached ? (
+          <div className="composer__kit" role="status">
+            <Icon name="brand" size={14} />
+            <span className="composer__kit-text">
+              <strong>{attached.name}</strong> kit attached
+            </span>
+            <Button variant="ghost" busy={kitBusy} title="Restyle this whole video to the kit now" onClick={() => void restyle()}>
+              Restyle
+            </Button>
+            <IconButton icon="close" label="Do not send the kit" onClick={() => setAttached(null)} />
+          </div>
+        ) : null}
+        {kitError ? <Notice message={kitError} onDismiss={() => setKitError(null)} /> : null}
         <div className="composer__box">
           <textarea
             ref={box}
@@ -198,13 +268,15 @@ export function ChatPane({ chat, context, selectedName }: ChatPaneProps) {
               className="composer__action composer__action--send"
               icon="send"
               label={state.busy ? "Send when this turn ends (Return)" : "Send (Return)"}
-              disabled={!draft.trim() || choosing}
-              onClick={submit}
+              disabled={!draft.trim() || choosing || kitBusy}
+              onClick={() => void submit()}
             />
           )}
         </div>
         <ComposerTools
-          disabled={choosing}
+          disabled={choosing || kitBusy}
+          kits={kits.status === "ready" ? kits.kits : []}
+          onKit={(id) => void pickKit(id)}
           onSkill={(name) => {
             setDraft((before) => `Use the ${name} skill. ${before}`.trimEnd() + (before ? "" : " "));
             box.current?.focus();

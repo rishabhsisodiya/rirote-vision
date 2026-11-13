@@ -390,6 +390,8 @@ export function Workspace(props: WorkspaceProps) {
             chat={chat}
             context={context}
             selectedName={selectedClip ? clipName(selectedClip) : null}
+            projectPath={project.path}
+            kits={props.kits}
           />
         </aside>
       ) : null}

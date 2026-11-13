@@ -397,7 +397,24 @@ export interface BrandKit {
   logo: string | null;
   tone: string;
   website: string;
+  /** Photos, cut-outs and 3D avatars; changed only through the asset calls. */
+  assets: BrandAsset[];
   updatedAt: number;
+}
+
+export type BrandAssetKind = "photo" | "cutout" | "avatar3d";
+
+/** A photo, cut-out or 3D avatar kept in a brand kit (brandkit.rs). */
+export interface BrandAsset {
+  id: string;
+  kind: BrandAssetKind;
+  /** Full path of the file in the kit's folder. */
+  file: string;
+  label: string;
+  /** When to use it. */
+  note: string;
+  /** For a cut-out, the photo it was made from. */
+  cutoutOf?: string;
 }
 
 /** A review note pinned to a moment and a spot on the frame (comments.rs). */

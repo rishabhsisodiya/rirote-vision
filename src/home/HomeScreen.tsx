@@ -8,7 +8,8 @@ import type { ProjectSummary, RecentProject, Resolution, SetupReport } from "../
 import { ReferenceForm } from "../references/ReferenceForm";
 import { ReferenceGallery } from "../references/ReferenceGallery";
 import type { ReferencesState } from "../references/useReferences";
-import type { BrandKitsState } from "../brand/useBrandKits";
+import { KitPicker } from "../brand/KitPicker";
+import { withKitBrief, type BrandKitsState } from "../brand/useBrandKits";
 import type { BrandKit } from "../lib/types";
 import type { RecentState } from "../projects/useRecentProjects";
 import { Button } from "../ui/Button";
@@ -158,30 +159,13 @@ function useStart(onStarted: HomeScreenProps["onStarted"]) {
       const kitBrief = kitId ? await api.brandBrief(kitId) : null;
       const project = await createNamed(name, shape);
       if (kitId) await api.setProjectBrand(project.path, kitId);
-      onStarted(project, kitBrief ? `${brief}\n\nUse this brand throughout:\n${kitBrief}` : brief);
+      onStarted(project, kitBrief ? withKitBrief(brief, kitBrief) : brief);
     } catch (cause) {
       setError(errorMessage(cause));
       setBusy(false);
     }
   };
   return { busy, error, start };
-}
-
-function KitPicker({ kits, value, onChange }: { kits: BrandKit[]; value: string; onChange: (id: string) => void }) {
-  if (kits.length === 0) return null;
-  return (
-    <label className="field">
-      <span className="field__label">Brand kit</span>
-      <select value={value} onChange={(event) => onChange(event.target.value)}>
-        <option value="">None</option>
-        {kits.map((kit) => (
-          <option key={kit.id} value={kit.id}>
-            {kit.name}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
 }
 
 function MakeForm({ onStarted, kits }: { onStarted: HomeScreenProps["onStarted"]; kits: BrandKit[] }) {

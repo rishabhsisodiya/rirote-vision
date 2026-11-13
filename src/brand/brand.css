@@ -166,3 +166,135 @@
 .look__strength input {
   width: 80px;
 }
+
+.brands__editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5, 24px);
+  max-width: 720px;
+}
+
+.kit-assets {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--line);
+}
+
+.kit-assets__head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.kit-assets__title {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.kit-assets__add {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.kit-assets__tick {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-soft);
+  font-size: var(--text-small);
+}
+
+.kit-assets__empty {
+  text-align: left;
+}
+
+.kit-assets__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-3);
+}
+
+.kit-asset {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pane);
+  background: var(--stage);
+  min-width: 0;
+}
+
+.kit-asset__pictures {
+  display: flex;
+  gap: var(--space-2);
+  height: 132px;
+}
+
+.kit-asset__thumb {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  object-fit: cover;
+  background: var(--surface, #111);
+}
+
+.kit-asset__thumb--3d,
+.kit-asset__thumb--wait {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+
+/* A checkerboard shows which parts of the cut-out are transparent. */
+.kit-asset__thumb--cut {
+  object-fit: contain;
+  background-color: #2a2a2a;
+  background-image:
+    linear-gradient(45deg, #3a3a3a 25%, transparent 25%),
+    linear-gradient(-45deg, #3a3a3a 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #3a3a3a 75%),
+    linear-gradient(-45deg, transparent 75%, #3a3a3a 75%);
+  background-size: 12px 12px;
+  background-position: 0 0, 0 6px, 6px -6px, -6px 0;
+}
+
+.kit-asset__file {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kit-asset__input {
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--text);
+  font-size: var(--text-small);
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.kit-asset__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}

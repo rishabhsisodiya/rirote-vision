@@ -141,6 +141,13 @@ export const api = {
   listBrandKits: () => call<BrandKit[]>("brandkit_list"),
   saveBrandKit: (kit: BrandKit) => call<BrandKit>("brandkit_save", { kit }),
   setBrandLogo: (id: string, file: string) => call<BrandKit>("brandkit_logo", { id, file }),
+  addBrandAsset: (id: string, file: string, label: string, note: string) =>
+    call<BrandKit>("brandkit_add_asset", { id, file, label, note }),
+  updateBrandAsset: (id: string, asset: string, label: string, note: string) =>
+    call<BrandKit>("brandkit_update_asset", { id, asset, label, note }),
+  removeBrandAsset: (id: string, asset: string) => call<BrandKit>("brandkit_remove_asset", { id, asset }),
+  /** Background removal for a kit photo; the first run downloads a model. */
+  cutBrandAsset: (id: string, asset: string) => call<BrandKit>("brandkit_cutout", { id, asset }),
   deleteBrandKit: (id: string) => call<void>("brandkit_delete", { id }),
   brandBrief: (id: string) => call<string>("brandkit_brief", { id }),
   projectBrand: (path: string) => call<BrandKit | null>("project_brand_get", { path }),
