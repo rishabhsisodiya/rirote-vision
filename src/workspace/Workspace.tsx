@@ -68,6 +68,8 @@ interface WorkspaceProps {
   onBriefSent: () => void;
   kits: BrandKitsState;
   onManageBrands: () => void;
+  /** Told when the assistant starts and stops working. */
+  onAssistantBusy: (busy: boolean) => void;
 }
 
 /** The editor: project on the left, picture and timeline in the middle, assistant on the right. */
@@ -162,6 +164,13 @@ export function Workspace(props: WorkspaceProps) {
     onBriefSent();
     void send(brief, latestContext.current);
   }, [brief, chatLoaded, trust, assistantBusy, send, onBriefSent]);
+
+  // The sidebar logo plays while the assistant works; it stops when the project closes.
+  const { onAssistantBusy } = props;
+  useEffect(() => {
+    onAssistantBusy(assistantBusy);
+  }, [assistantBusy, onAssistantBusy]);
+  useEffect(() => () => onAssistantBusy(false), [onAssistantBusy]);
 
   // A request for permission must be seen, even with the assistant hidden.
   const waiting = chat.state.approvals.length > 0 || brief !== null;

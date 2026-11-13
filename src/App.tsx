@@ -30,6 +30,7 @@ export function App() {
   const [view, setView] = useState<View>("home");
   const [dialog, setDialog] = useState<"new" | "setup" | "shortcuts" | "palette" | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [assistantBusy, setAssistantBusy] = useState(false);
   /** The first request for a project Home just made; sent once the assistant is ready. */
   const [brief, setBrief] = useState<{ path: string; text: string } | null>(null);
   const [homeTab, setHomeTab] = useState<HomeTab>("make");
@@ -199,6 +200,7 @@ export function App() {
         view={view}
         hasProject={project !== null}
         activeJobs={activeJobs}
+        working={assistantBusy || activeJobs > 0}
         onNavigate={navigate}
         onNew={() => setDialog("new")}
         onPalette={() => setDialog("palette")}
@@ -220,6 +222,7 @@ export function App() {
               kits={kits.state}
               onManageBrands={() => setView("brands")}
               onBriefSent={() => setBrief(null)}
+              onAssistantBusy={setAssistantBusy}
             />
           </div>
         ) : null}

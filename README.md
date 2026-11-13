@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/brand/logo-animated.svg" width="128" height="128" alt="RIROTE VISION logo"></p>
+
 # RIROTE VISION
 
 An AI video studio for macOS. Describe the video in chat, or start from a script or a reference video. Then refine it on a timeline and export it.

@@ -1,5 +1,6 @@
 import type { IconName } from "../ui/Icon";
 import { Icon } from "../ui/Icon";
+import { LogoMark } from "./LogoMark";
 
 export type View = "home" | "editor" | "references" | "brands" | "settings";
 
@@ -9,6 +10,8 @@ interface RailProps {
   hasProject: boolean;
   /** Jobs queued or running in the open project. */
   activeJobs: number;
+  /** The assistant or a job is working: the logo plays. */
+  working: boolean;
   onNavigate: (view: View) => void;
   onNew: () => void;
   onPalette: () => void;
@@ -52,8 +55,10 @@ export function Rail(props: RailProps) {
     <nav className="rail" aria-label="Navigation">
       <div className="rail__drag" data-tauri-drag-region />
       <span className="rail__brand" aria-hidden="true">
-        <span className="rail__mark">RV</span>
-        <span className="rail__name">RIROTE VISION</span>
+        <LogoMark working={props.working} />
+        <span className="rail__name">
+          RI<em>RO</em>TE VISION
+        </span>
       </span>
       <button type="button" className="rail__item" aria-label="Search projects and commands" title="Search (⌘K)" onClick={props.onPalette}>
         <RailLabel icon="search" label="Search" keys="⌘K" />

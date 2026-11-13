@@ -42,25 +42,58 @@
 
 .rail__brand {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: var(--space-2);
   margin: 0 0 var(--space-3);
-  padding: 0 10px;
+  padding: 0 5px;
   white-space: nowrap;
 }
 
-.rail__mark {
-  color: var(--accent);
-  font: 400 22px / 1 var(--font-display);
-  letter-spacing: 0.04em;
+.logo-mark {
+  flex: none;
 }
 
 .rail__name {
   overflow: hidden;
-  color: var(--muted);
-  font: 400 15px / 1 var(--font-display);
-  letter-spacing: 0.12em;
+  color: var(--text);
+  font: 400 17px / 1 var(--font-display);
+  letter-spacing: 0.08em;
   text-overflow: ellipsis;
+}
+
+/* "RO" in cyan, as in the Rirote Global wordmark. */
+.rail__name em {
+  color: var(--accent);
+  font-style: normal;
+}
+
+/* The logo plays only while something is working, and never under Reduce Motion. */
+.logo-mark[data-working="true"] .logo-mark__head {
+  animation: logo-play 3.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+.logo-mark[data-working="true"] .logo-mark__tally {
+  animation: logo-blink 1.2s steps(1, end) infinite;
+}
+
+@keyframes logo-play {
+  0%, 8% { transform: translateX(0); opacity: 1; }
+  80% { transform: translateX(286px); opacity: 1; }
+  88% { transform: translateX(286px); opacity: 0; }
+  92% { transform: translateX(0); opacity: 0; }
+  100% { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes logo-blink {
+  0% { opacity: 1; }
+  60% { opacity: 0.22; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .logo-mark[data-working="true"] .logo-mark__head,
+  .logo-mark[data-working="true"] .logo-mark__tally {
+    animation: none;
+  }
 }
 
 .rail__item,
