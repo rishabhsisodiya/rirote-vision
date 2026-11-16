@@ -2,14 +2,16 @@ import "./brand.css";
 
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { api, errorMessage } from "../lib/ipc";
-import type { BrandColour, BrandKit } from "../lib/types";
+import type { BrandColour, BrandKit, SiteFindings } from "../lib/types";
 import { Button, IconButton } from "../ui/Button";
 import { Notice } from "../ui/Notice";
 import { Spinner } from "../ui/Spinner";
 import { KitAssets } from "./KitAssets";
+import { SiteFindingsCard } from "./SiteFindingsCard";
+import { applyPicks, DEFAULT_COLOURS, initialPicks, type Picks } from "./siteFindings";
 import type { BrandKitsControls } from "./useBrandKits";
 
 /** Popular Google Fonts, offered as suggestions; any family name may be typed. */
@@ -18,11 +20,7 @@ const FONTS = ["Inter", "Poppins", "Montserrat", "Bebas Neue", "Anton", "Oswald"
 const EMPTY: BrandKit = {
   id: "",
   name: "",
-  colours: [
-    { name: "Background", hex: "#0A1628" },
-    { name: "Accent", hex: "#00B4D8" },
-    { name: "Text", hex: "#F0F4FF" },
-  ],
+  colours: DEFAULT_COLOURS.map((colour) => ({ ...colour })),
   headingFont: "",
   bodyFont: "",
   logo: null,
@@ -39,6 +37,8 @@ export function BrandKitsScreen({ kits }: { kits: BrandKitsControls }) {
   const list = kits.state.status === "ready" ? kits.state.kits : [];
   const [chosen, setChosen] = useState<string | null>(null);
   const [draft, setDraft] = useState<BrandKit | null>(null);
+  // A problem found after saving (the form starts afresh once a kit is saved).
+  const [savedNotice, setSavedNotice] = useState<string | null>(null);
   const current = list.find((kit) => kit.id === chosen) ?? null;
 
   // Kits can be added or changed outside the app; read the folder afresh on opening.
@@ -64,6 +64,7 @@ export function BrandKitsScreen({ kits }: { kits: BrandKitsControls }) {
             <Button
               icon="plus"
               onClick={() => {
+                setSavedNotice(null);
                 setChosen(null);
                 setDraft({ ...EMPTY, colours: EMPTY.colours.map((colour) => ({ ...colour })) });
               }}
@@ -77,7 +78,10 @@ export function BrandKitsScreen({ kits }: { kits: BrandKitsControls }) {
           <ul>
             {list.map((kit) => (
               <li key={kit.id}>
-                <button type="button" className="references__row" aria-current={kit.id === chosen ? "true" : undefined} onClick={() => setChosen(kit.id)}>
+                <button type="button" className="references__row" aria-current={kit.id === chosen ? "true" : undefined} onClick={() => {
+                    setSavedNotice(null);
+                    setChosen(kit.id);
+                  }}>
                   <span className="references__still">
                     {kit.logo ? <img src={convertFileSrc(kit.logo)} alt="" className="brands__logo-thumb" /> : <span className="brands__initial">{kit.name.slice(0, 1)}</span>}
                   </span>
@@ -100,7 +104,9 @@ export function BrandKitsScreen({ kits }: { kits: BrandKitsControls }) {
               <KitForm
                 key={draft.id || "new"}
                 kit={draft}
-                onSaved={async (saved) => {
+                notice={savedNotice}
+                onSaved={async (saved, warning) => {
+                  setSavedNotice(warning ?? null);
                   await kits.reload();
                   setChosen(saved.id);
                   setDraft(saved);
@@ -134,14 +140,20 @@ export function BrandKitsScreen({ kits }: { kits: BrandKitsControls }) {
 
 interface KitFormProps {
   kit: BrandKit;
-  onSaved: (kit: BrandKit) => Promise<void>;
+  /** Shown when the form opens, for something that went wrong while saving. */
+  notice: string | null;
+  /** `warning` is set when the kit saved but something after it did not. */
+  onSaved: (kit: BrandKit, warning?: string) => Promise<void>;
   onDeleted: () => Promise<void>;
 }
 
-function KitForm({ kit, onSaved, onDeleted }: KitFormProps) {
+function KitForm({ kit, notice, onSaved, onDeleted }: KitFormProps) {
   const [form, setForm] = useState<BrandKit>(kit);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(notice);
+  const site = useSiteRead();
+  // A logo taken from the website, copied into the kit when it is saved.
+  const [pendingLogo, setPendingLogo] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
   const badColour = form.colours.find((colour) => !HEX.test(colour.hex));
   const ready = form.name.trim().length > 0 && !badColour;
@@ -156,7 +168,18 @@ function KitForm({ kit, onSaved, onDeleted }: KitFormProps) {
     setSaving(true);
     setError(null);
     try {
-      await onSaved(await api.saveBrandKit(form));
+      const saved = await api.saveBrandKit(form);
+      if (!pendingLogo) {
+        await onSaved(saved);
+        return;
+      }
+      try {
+        const withLogo = await api.setBrandLogo(saved.id, pendingLogo);
+        setPendingLogo(null);
+        await onSaved(withLogo);
+      } catch (cause) {
+        await onSaved(saved, `The kit was saved, but the website's logo could not be added: ${errorMessage(cause)} Fetch from the website again, or add the logo yourself.`);
+      }
     } catch (cause) {
       setError(errorMessage(cause));
     } finally {
@@ -170,6 +193,7 @@ function KitForm({ kit, onSaved, onDeleted }: KitFormProps) {
     if (typeof file !== "string") return;
     try {
       const saved = await api.setBrandLogo(form.id, file);
+      setPendingLogo(null);
       patch({ logo: saved.logo });
       await onSaved(saved);
     } catch (cause) {
@@ -190,9 +214,18 @@ function KitForm({ kit, onSaved, onDeleted }: KitFormProps) {
           <input type="text" value={form.name} maxLength={60} placeholder="Rirote Global" onChange={(event) => patch({ name: event.target.value })} />
         </label>
         <div className="kit-form__logo">
-          {form.logo ? <img src={convertFileSrc(form.logo)} alt="Logo" /> : <span className="home__hint">No logo</span>}
+          {pendingLogo ? (
+            <span className="kit-form__pending">
+              <img src={convertFileSrc(pendingLogo)} alt="Logo from the website" />
+              <span className="home__hint">Added when you save</span>
+            </span>
+          ) : form.logo ? (
+            <img src={convertFileSrc(form.logo)} alt="Logo" />
+          ) : (
+            <span className="home__hint">No logo</span>
+          )}
           <Button disabled={!form.id} title={form.id ? undefined : "Save the kit first"} onClick={() => void chooseLogo()}>
-            {form.logo ? "Replace Logo" : "Add Logo"}
+            {form.logo || pendingLogo ? "Replace Logo" : "Add Logo"}
           </Button>
         </div>
       </div>
@@ -233,10 +266,48 @@ function KitForm({ kit, onSaved, onDeleted }: KitFormProps) {
         <span className="field__label">Tone</span>
         <textarea rows={3} maxLength={600} value={form.tone} placeholder="Plain and confident. Short sentences, no hype." onChange={(event) => patch({ tone: event.target.value })} />
       </label>
-      <label className="field">
-        <span className="field__label">Website</span>
-        <input type="text" value={form.website} placeholder="rirote.com" onChange={(event) => patch({ website: event.target.value })} />
-      </label>
+      <div className="field">
+        <label className="field__label" htmlFor="kit-website">
+          Website
+        </label>
+        <div className="kit-form__website">
+          <input id="kit-website" type="text" value={form.website} maxLength={200} placeholder="rirote.com" onChange={(event) => patch({ website: event.target.value })} />
+          <Button
+            icon="spark"
+            busy={site.reading}
+            disabled={form.website.trim().length === 0}
+            title="Read the name, colours, fonts, logo and tone from this website"
+            onClick={() => {
+              setPendingLogo(null);
+              void site.read(form.website);
+            }}
+          >
+            {site.reading ? "Reading Site…" : "Fetch from Website"}
+          </Button>
+          {site.reading ? (
+            <Button variant="ghost" onClick={site.cancel}>
+              Cancel
+            </Button>
+          ) : null}
+        </div>
+        {site.reading ? <p className="field__help">Reading the page and its stylesheets, then asking Claude Code to name the colours. This takes up to half a minute.</p> : null}
+      </div>
+      {site.error ? <Notice message={site.error} onDismiss={site.clear} /> : null}
+      {site.found ? (
+        <SiteFindingsCard
+          key={site.found.url + site.generation}
+          found={site.found}
+          initial={initialPicks(site.found, { ...form, logo: form.logo ?? pendingLogo })}
+          onApply={(picks: Picks) => {
+            if (!site.found) return;
+            const applied = applyPicks(form, site.found, picks);
+            setForm(applied.kit);
+            if (applied.logo) setPendingLogo(applied.logo);
+            site.clear();
+          }}
+          onDismiss={site.clear}
+        />
+      ) : null}
 
       {error ? <Notice message={error} onDismiss={() => setError(null)} /> : null}
       <div className="row">
@@ -262,4 +333,68 @@ function KitForm({ kit, onSaved, onDeleted }: KitFormProps) {
       </div>
     </form>
   );
+}
+
+interface SiteRead {
+  reading: boolean;
+  found: SiteFindings | null;
+  error: string | null;
+  /** Counts reads, so a second read of the same site starts a fresh card. */
+  generation: number;
+  read: (website: string) => Promise<void>;
+  cancel: () => void;
+  clear: () => void;
+}
+
+/** One website read for the form; leaving the form stops a read under way. */
+function useSiteRead(): SiteRead {
+  const [reading, setReading] = useState(false);
+  const [found, setFound] = useState<SiteFindings | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [generation, setGeneration] = useState(0);
+  const latest = useRef(0);
+  const busy = useRef(false);
+
+  useEffect(
+    () => () => {
+      latest.current += 1;
+      if (busy.current) void api.cancelBrandSite();
+    },
+    [],
+  );
+
+  const read = async (website: string) => {
+    const mine = ++latest.current;
+    setGeneration(mine);
+    busy.current = true;
+    setReading(true);
+    setFound(null);
+    setError(null);
+    try {
+      const result = await api.readBrandSite(website);
+      if (latest.current === mine) setFound(result);
+    } catch (cause) {
+      // A read stopped by Cancel, or by a newer read, says nothing.
+      if (latest.current === mine && errorMessage(cause) !== "Stopped.") setError(errorMessage(cause));
+    } finally {
+      if (latest.current === mine) {
+        busy.current = false;
+        setReading(false);
+      }
+    }
+  };
+
+  const cancel = () => {
+    latest.current += 1;
+    busy.current = false;
+    setReading(false);
+    void api.cancelBrandSite();
+  };
+
+  const clear = () => {
+    setFound(null);
+    setError(null);
+  };
+
+  return { reading, found, error, generation, read, cancel, clear };
 }

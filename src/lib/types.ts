@@ -402,6 +402,23 @@ export interface BrandKit {
   updatedAt: number;
 }
 
+/** What was read off a website for a kit, to review before applying (sitebrand/mod.rs). */
+export interface SiteFindings {
+  /** Where the page ended up after redirects. */
+  url: string;
+  name: string | null;
+  colours: BrandColour[];
+  headingFont: string | null;
+  bodyFont: string | null;
+  tone: string | null;
+  /** A checked copy of the site's logo, kept until the next read. */
+  logoFile: string | null;
+  /** Whether Claude Code chose the colour roles and wrote the tone. */
+  aiUsed: boolean;
+  /** What could not be read, in plain words. */
+  notes: string[];
+}
+
 export type BrandAssetKind = "photo" | "cutout" | "avatar3d";
 
 /** A photo, cut-out or 3D avatar kept in a brand kit (brandkit.rs). */

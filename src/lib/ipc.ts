@@ -23,6 +23,7 @@ import type {
   FreeSound,
   Comment,
   BrandKit,
+  SiteFindings,
   MediaPeaks,
   MediaStill,
   CatalogShelf,
@@ -148,6 +149,8 @@ export const api = {
   removeBrandAsset: (id: string, asset: string) => call<BrandKit>("brandkit_remove_asset", { id, asset }),
   /** Background removal for a kit photo; the first run downloads a model. */
   cutBrandAsset: (id: string, asset: string) => call<BrandKit>("brandkit_cutout", { id, asset }),
+  readBrandSite: (url: string) => call<SiteFindings>("brandkit_read_site", { url }),
+  cancelBrandSite: () => call<void>("brandkit_read_site_cancel"),
   deleteBrandKit: (id: string) => call<void>("brandkit_delete", { id }),
   brandBrief: (id: string) => call<string>("brandkit_brief", { id }),
   projectBrand: (path: string) => call<BrandKit | null>("project_brand_get", { path }),

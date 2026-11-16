@@ -6,6 +6,7 @@
 mod agent;
 mod brandkit;
 mod catalog;
+mod claude_once;
 mod comments;
 mod doctor;
 mod error;
@@ -28,6 +29,7 @@ mod reference;
 mod render;
 mod settings;
 mod shell_env;
+mod sitebrand;
 mod skills;
 mod store;
 mod timeline;
@@ -62,6 +64,7 @@ struct AppState {
     settings: SettingsStore,
     posters: posters::Posters,
     brands: brandkit::BrandKits,
+    site_reader: sitebrand::SiteReader,
     comments: comments::Comments,
     references: Arc<reference::ReferenceService>,
     /// One engine install at a time.
@@ -301,6 +304,23 @@ fn project_brand_get(state: State<'_, AppState>, path: String) -> Option<brandki
 #[tauri::command]
 fn project_brand_set(state: State<'_, AppState>, path: String, id: Option<String>) -> AppResult<Option<brandkit::Kit>> {
     state.brands.use_in(Path::new(&path), id.as_deref())
+}
+
+/// Reads a website and suggests a kit from it; nothing is saved.
+#[tauri::command]
+async fn brandkit_read_site(state: State<'_, AppState>, url: String) -> AppResult<sitebrand::Findings> {
+    let model = state.settings.get().assistant_model;
+    let read = state.site_reader.read(&url, &model).await;
+    match &read {
+        Ok(found) => log::write(&state.data_dir, "brandkit", &format!("read site {} (claude: {}, notes: {})", found.url, found.ai_used, found.notes.len())),
+        Err(error) => log::write(&state.data_dir, "brandkit", &format!("site read failed: {error}")),
+    }
+    read
+}
+
+#[tauri::command]
+fn brandkit_read_site_cancel(state: State<'_, AppState>) {
+    state.site_reader.cancel();
 }
 
 #[tauri::command]
@@ -682,6 +702,7 @@ pub fn run() {
                 settings: SettingsStore::new(&data_dir),
                 posters: posters::Posters::new(&data_dir),
                 brands: brandkit::BrandKits::new(&data_dir),
+                site_reader: sitebrand::SiteReader::new(&data_dir),
                 comments: comments::Comments::new(),
                 references,
                 preview: PreviewManager::new(&data_dir),
@@ -770,6 +791,8 @@ pub fn run() {
             brandkit_cutout,
             brandkit_delete,
             brandkit_brief,
+            brandkit_read_site,
+            brandkit_read_site_cancel,
             project_brand_get,
             project_brand_set,
             transcript_read,

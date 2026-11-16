@@ -5,12 +5,10 @@
 use std::path::Path;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use serde_json::Value;
-
 use super::model::{Analysis, Blueprint, BlueprintShot, Pacing, ReferenceMeta, ShotList, Word, SCHEMA_VERSION};
-use super::run::{self, Cancel};
+use super::run::Cancel;
 use crate::error::{AppError, AppResult};
-use crate::shell_env;
+use crate::claude_once;
 
 const LIMIT: Duration = Duration::from_secs(15 * 60);
 
@@ -84,15 +82,8 @@ Return ONLY one JSON object shaped like this (the | lists are the allowed values
     )
 }
 
-/// The JSON object in a reply that may have fences or stray words around it.
-fn json_in(text: &str) -> Option<&str> {
-    let start = text.find('{')?;
-    let end = text.rfind('}')?;
-    (end > start).then(|| &text[start..=end])
-}
-
 pub fn parse(reply: &str, shots: &ShotList) -> Result<Analysis, String> {
-    let json = json_in(reply).ok_or("The reply had no JSON object.")?;
+    let json = claude_once::json_object(reply).ok_or("The reply had no JSON object.")?;
     let analysis: Analysis = serde_json::from_str(json).map_err(|error| error.to_string())?;
     let expected: Vec<usize> = shots.shots.iter().filter(|shot| shot.keyframe.is_some()).map(|shot| shot.index).collect();
     let got: Vec<usize> = analysis.shots.iter().map(|shot| shot.index).collect();
@@ -102,52 +93,11 @@ pub fn parse(reply: &str, shots: &ShotList) -> Result<Analysis, String> {
     Ok(analysis)
 }
 
-/// One `claude -p` run in `dir`; returns the model's text and its name.
+/// One `claude -p` run in `dir`, allowed to read the stills and nothing else.
 async fn complete(prompt: &str, dir: &Path, model: &str, cancel: &Cancel) -> AppResult<(String, String)> {
-    let claude = shell_env::require_program("claude", "Install Claude Code and sign in, then check the setup again.")?;
-    let mut command = shell_env::command(&claude);
-    command
-        .args(["-p", "--output-format", "json", "--append-system-prompt", SYSTEM_PROMPT])
-        // Read-only and isolated: no other tools, MCP servers, user hooks or saved session.
-        .args(["--tools", "Read", "--allowedTools", "Read", "--strict-mcp-config"])
-        .args(["--setting-sources", "project,local", "--no-session-persistence"])
-        .current_dir(dir)
-        .env("PWD", dir)
-        .stdin(std::process::Stdio::piped());
-    if !model.is_empty() {
-        command.args(["--model", model]);
-    }
-    cancel.check()?;
-    command.process_group(0);
-    let mut child = command
-        .spawn()
-        .map_err(|error| AppError::ToolFailed(format!("Could not start Claude Code: {error}")))?;
-    // The prompt goes on stdin so a long transcript never meets the argument limit.
-    if let Some(mut stdin) = child.stdin.take() {
-        use tokio::io::AsyncWriteExt;
-        stdin.write_all(prompt.as_bytes()).await?;
-    }
-    let output = run::wait(child, LIMIT, "the analysis", cancel).await?;
-    let envelope: Value = serde_json::from_slice(&output.stdout).map_err(|_| {
-        AppError::ToolFailed(format!("Claude Code did not answer.\n{}", shell_env::failure_text(&output)))
-    })?;
-    if envelope.get("is_error").and_then(Value::as_bool) == Some(true)
-        || envelope.get("subtype").and_then(Value::as_str) != Some("success")
-    {
-        let said = envelope.get("result").and_then(Value::as_str).unwrap_or("no reason given");
-        return Err(AppError::ToolFailed(format!("Claude Code could not finish the analysis: {said}")));
-    }
-    let used = envelope
-        .get("modelUsage")
-        .and_then(Value::as_object)
-        .and_then(|usage| {
-            usage
-                .iter()
-                .max_by_key(|(_, numbers)| numbers.get("outputTokens").and_then(Value::as_u64).unwrap_or(0))
-                .map(|(name, _)| name.clone())
-        })
-        .unwrap_or_else(|| "claude-code".into());
-    Ok((envelope.get("result").and_then(Value::as_str).unwrap_or("").to_owned(), used))
+    let ask = claude_once::Ask { prompt, system_prompt: SYSTEM_PROMPT, tools: &["Read"], dir, model, limit: LIMIT, what: "the analysis" };
+    let reply = claude_once::ask(ask, cancel).await?;
+    Ok((reply.text, reply.model))
 }
 
 /// Asks once, and once more with the reasons when the answer does not fit.

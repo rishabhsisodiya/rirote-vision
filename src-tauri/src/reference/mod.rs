@@ -7,7 +7,7 @@
 
 mod analyze;
 pub mod model;
-mod run;
+pub(crate) mod run;
 pub mod ytdlp;
 mod video;
 

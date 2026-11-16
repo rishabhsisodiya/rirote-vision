@@ -78,7 +78,7 @@ fn sniff(source: &Path) -> AppResult<AssetKind> {
 }
 
 /// One line of plain text, with no characters that could break out of a prompt line.
-fn clean_line(text: &str, max: usize, what: &str) -> AppResult<String> {
+pub(crate) fn clean_line(text: &str, max: usize, what: &str) -> AppResult<String> {
     let line: String = text.split_whitespace().collect::<Vec<_>>().join(" ");
     let line: String = line.chars().filter(|c| !c.is_control()).collect();
     if line.chars().count() > max {
@@ -175,7 +175,7 @@ fn valid_font(name: &str) -> bool {
 }
 
 impl Kit {
-    fn validate(&self) -> AppResult<()> {
+    pub(crate) fn validate(&self) -> AppResult<()> {
         if self.name.trim().is_empty() || self.name.len() > 60 {
             return Err(AppError::InvalidInput("Give the kit a name of up to 60 characters.".into()));
         }
